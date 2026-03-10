@@ -4,25 +4,25 @@ import { getDb } from "@/lib/db";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AddNoteForm } from "@/components/AddNoteForm";
-import { ArchivePersonButton } from "./ArchivePersonButton";
+import { ArchiveOrgButton } from "./ArchiveOrgButton";
+import { EditOrgSummary } from "./EditOrgSummary";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
-
-interface PersonRow {
-  id: string;
-  name: string;
-  organisation_id: string | null;
-  role: string | null;
-  relationship: string | null;
-  email: string | null;
-  phone: string | null;
-  archived: number;
-}
 
 interface OrgRow {
   id: string;
   name: string;
+  website: string | null;
+  summary: string | null;
   org_type: string | null;
+  archived: number;
+}
+
+interface PersonRow {
+  id: string;
+  name: string;
+  role: string | null;
+  email: string | null;
 }
 
 interface LinkedCardRow {
@@ -31,21 +31,6 @@ interface LinkedCardRow {
   status: string;
   category_name: string | null;
   subcategory_name: string | null;
-  org_name: string | null;
-}
-
-interface LinkedTodoRow {
-  id: string;
-  title: string;
-  status: string;
-  due_date: string | null;
-  assignee_name: string | null;
-}
-
-interface LinkedMeetingNoteRow {
-  id: string;
-  title: string;
-  date: string;
 }
 
 interface NoteRow {
@@ -101,7 +86,7 @@ type PageProps = {
   params: Promise<{ id: string }>;
 };
 
-export default async function PersonDetailPage({ params }: PageProps) {
+export default async function OrgDetailPage({ params }: PageProps) {
   const cookieStore = await cookies();
   const session = requireSession(cookieStore);
   void session;
@@ -109,88 +94,57 @@ export default async function PersonDetailPage({ params }: PageProps) {
   const { id } = await params;
   const db = getDb();
 
-  // Fetch person
-  const person = db
-    .prepare("SELECT * FROM people WHERE id = ? AND archived = 0")
-    .get(id) as PersonRow | undefined;
+  // Fetch organisation
+  const org = db
+    .prepare("SELECT * FROM organisations WHERE id = ? AND archived = 0")
+    .get(id) as OrgRow | undefined;
 
-  if (!person) {
+  if (!org) {
     notFound();
   }
 
-  // Organisation
-  let org: OrgRow | undefined;
-  if (person.organisation_id) {
-    org = db
-      .prepare("SELECT id, name, org_type FROM organisations WHERE id = ?")
-      .get(person.organisation_id) as OrgRow | undefined;
-  }
+  // People in this org
+  const people = db
+    .prepare(
+      `SELECT id, name, role, email
+       FROM people
+       WHERE organisation_id = ? AND archived = 0
+       ORDER BY name`
+    )
+    .all(id) as PersonRow[];
 
-  // Linked cards (via card_people, with category path)
+  // Linked cards (via org_cards junction table)
   const linkedCards = db
     .prepare(
       `SELECT c.id, c.title, c.status,
               cat.name AS category_name,
-              sub.name AS subcategory_name,
-              o.name AS org_name
+              sub.name AS subcategory_name
        FROM cards c
-       JOIN card_people cp ON cp.card_id = c.id
+       JOIN org_cards oc ON oc.card_id = c.id
        LEFT JOIN subcategories sub ON sub.id = c.subcategory_id
        LEFT JOIN categories cat ON cat.id = COALESCE(sub.category_id, c.category_id)
-       LEFT JOIN org_cards oc ON oc.card_id = c.id
-       LEFT JOIN organisations o ON o.id = oc.organisation_id
-       WHERE cp.person_id = ? AND c.archived = 0`
+       WHERE oc.organisation_id = ? AND c.archived = 0`
     )
     .all(id) as LinkedCardRow[];
 
-  // Linked todos (via todo_people or ball_in_court_person_id)
-  const linkedTodos = db
-    .prepare(
-      `SELECT DISTINCT t.id, t.title, t.status, t.due_date,
-              u.name AS assignee_name
-       FROM todos t
-       JOIN todo_people tp ON tp.todo_id = t.id
-       LEFT JOIN users u ON u.id = t.assigned_to
-       WHERE tp.person_id = ? AND t.archived = 0
-       UNION
-       SELECT DISTINCT t.id, t.title, t.status, t.due_date,
-              u.name AS assignee_name
-       FROM todos t
-       LEFT JOIN users u ON u.id = t.assigned_to
-       WHERE t.ball_in_court_person_id = ? AND t.archived = 0
-       ORDER BY due_date ASC`
-    )
-    .all(id, id) as LinkedTodoRow[];
-
-  // Meeting notes (via meeting_note_people)
-  const meetingNotes = db
-    .prepare(
-      `SELECT mn.id, mn.title, mn.date
-       FROM meeting_notes mn
-       JOIN meeting_note_people mnp ON mnp.meeting_note_id = mn.id
-       WHERE mnp.person_id = ? AND mn.archived = 0
-       ORDER BY mn.date DESC`
-    )
-    .all(id) as LinkedMeetingNoteRow[];
-
-  // Notes on this person
+  // Notes on this organisation
   const notes = db
     .prepare(
       `SELECT n.id, n.content, n.created_at, u.name AS creator_name
        FROM notes n
        LEFT JOIN users u ON u.id = n.created_by
-       WHERE n.entity_type = 'person' AND n.entity_id = ? AND n.archived = 0
+       WHERE n.entity_type = 'organisation' AND n.entity_id = ? AND n.archived = 0
        ORDER BY n.created_at DESC`
     )
     .all(id) as NoteRow[];
 
-  // References linked to this person (via ref_entities)
+  // References linked to this organisation (via ref_entities)
   const refs = db
     .prepare(
       `SELECT r.id, r.ref_type, r.title, r.date
        FROM refs r
        JOIN ref_entities re ON re.ref_id = r.id
-       WHERE re.entity_type = 'person' AND re.entity_id = ? AND r.archived = 0
+       WHERE re.entity_type = 'organisation' AND re.entity_id = ? AND r.archived = 0
        ORDER BY r.date DESC, r.created_at DESC`
     )
     .all(id) as RefRow[];
@@ -201,7 +155,7 @@ export default async function PersonDetailPage({ params }: PageProps) {
       `SELECT al.id, al.description, u.name AS user_name, al.created_at
        FROM activity_log al
        LEFT JOIN users u ON u.id = al.user_id
-       WHERE al.entity_type = 'person' AND al.entity_id = ?
+       WHERE al.entity_type = 'organisation' AND al.entity_id = ?
        ORDER BY al.created_at DESC`
     )
     .all(id) as ActivityRow[];
@@ -216,55 +170,89 @@ export default async function PersonDetailPage({ params }: PageProps) {
               href="/people"
               className="text-sm text-stone-400 hover:text-navy transition-colors"
             >
-              &larr; {person.name}
+              &larr; {org.name}
             </Link>
             <h1 className="mt-1 font-heading text-xl text-navy">
-              {person.name}
+              {org.name}
             </h1>
           </div>
-          <ArchivePersonButton personId={person.id} />
+          <ArchiveOrgButton orgId={org.id} />
         </div>
 
-        {/* Org + Role */}
-        {(org || person.role) && (
-          <p className="mt-1 text-sm text-stone-500">
-            {org && <span>{org.name}</span>}
-            {org && person.role && <span> &middot; </span>}
-            {person.role && <span>{person.role}</span>}
-          </p>
+        {/* Org type */}
+        {org.org_type && (
+          <p className="mt-1 text-sm text-stone-500">{org.org_type}</p>
         )}
 
-        {/* Contact details */}
-        <div className="mt-2 space-y-0.5">
-          {person.email && (
-            <p className="text-sm text-stone-500">
-              <a
-                href={`mailto:${person.email}`}
-                className="hover:text-navy transition-colors"
-              >
-                {person.email}
-              </a>
-            </p>
-          )}
-          {person.phone && (
-            <p className="text-sm text-stone-500">
-              <a
-                href={`tel:${person.phone}`}
-                className="hover:text-navy transition-colors"
-              >
-                {person.phone}
-              </a>
-            </p>
-          )}
-        </div>
-
-        {/* Relationship */}
-        {person.relationship && (
-          <p className="mt-2 text-sm text-stone-500 italic">
-            Relationship: {person.relationship}
+        {/* Website */}
+        {org.website && (
+          <p className="mt-1 text-sm text-stone-500">
+            <a
+              href={
+                org.website.startsWith("http")
+                  ? org.website
+                  : `https://${org.website}`
+              }
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hover:text-navy transition-colors"
+            >
+              {org.website}
+            </a>
           </p>
         )}
       </header>
+
+      {/* Summary */}
+      <section className="border-t border-stone-200 py-4">
+        <h2 className="text-xs font-sans font-semibold uppercase tracking-widest text-stone-400 mb-3">
+          Summary
+        </h2>
+        <EditOrgSummary orgId={org.id} initialSummary={org.summary} />
+      </section>
+
+      {/* People */}
+      <section className="border-t border-stone-200 py-4">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-xs font-sans font-semibold uppercase tracking-widest text-stone-400">
+            People
+          </h2>
+        </div>
+        {people.length === 0 ? (
+          <p className="text-sm text-stone-400">No people in this organisation.</p>
+        ) : (
+          <ul className="space-y-2">
+            {people.map((person) => (
+              <li key={person.id} className="text-sm">
+                <Link
+                  href={`/people/${person.id}`}
+                  className="text-navy hover:underline"
+                >
+                  {person.name}
+                </Link>
+                {person.role && (
+                  <span className="text-stone-500">
+                    {" "}
+                    &middot; {person.role}
+                  </span>
+                )}
+                {person.email && (
+                  <span className="text-stone-500">
+                    {" "}
+                    &middot;{" "}
+                    <a
+                      href={`mailto:${person.email}`}
+                      className="hover:text-navy transition-colors"
+                    >
+                      {person.email}
+                    </a>
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
 
       {/* Linked Cards */}
       <section className="border-t border-stone-200 py-4">
@@ -287,9 +275,6 @@ export default async function PersonDetailPage({ params }: PageProps) {
                       href={`/cards/${card.id}`}
                       className="text-navy hover:underline"
                     >
-                      {card.org_name && (
-                        <span className="text-stone-500">{card.org_name} &mdash; </span>
-                      )}
                       {card.title}
                     </Link>
                     {path && (
@@ -305,73 +290,13 @@ export default async function PersonDetailPage({ params }: PageProps) {
         )}
       </section>
 
-      {/* To-Dos involving this person */}
-      <section className="border-t border-stone-200 py-4">
-        <h2 className="text-xs font-sans font-semibold uppercase tracking-widest text-stone-400 mb-3">
-          To-Dos
-        </h2>
-        {linkedTodos.length === 0 ? (
-          <p className="text-sm text-stone-400">No linked to-dos.</p>
-        ) : (
-          <ul className="space-y-2">
-            {linkedTodos.map((todo) => (
-              <li key={todo.id} className="text-sm flex items-start gap-2">
-                <span className="mt-0.5 flex-shrink-0">
-                  {todo.status === "done" ? (
-                    <span className="text-green-500 text-xs">&#10003;</span>
-                  ) : (
-                    <span className="inline-block h-4 w-4 rounded border border-stone-300 bg-white" />
-                  )}
-                </span>
-                <div>
-                  <Link
-                    href={`/todos/${todo.id}`}
-                    className={`hover:underline ${
-                      todo.status === "done"
-                        ? "text-stone-400 line-through"
-                        : "text-navy"
-                    }`}
-                  >
-                    {todo.title}
-                  </Link>
-                  <span className="text-stone-400 text-xs ml-1.5">
-                    {todo.assignee_name && `\u2014 ${todo.assignee_name}`}
-                    {todo.due_date && `, ${formatShortDate(todo.due_date)}`}
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
-
-      {/* Meeting Notes */}
-      {meetingNotes.length > 0 && (
-        <section className="border-t border-stone-200 py-4">
-          <h2 className="text-xs font-sans font-semibold uppercase tracking-widest text-stone-400 mb-3">
-            Meeting Notes
-          </h2>
-          <ul className="space-y-2">
-            {meetingNotes.map((mn) => (
-              <li key={mn.id} className="text-sm flex items-baseline gap-2">
-                <span>{"\uD83D\uDCDD"}</span>
-                <span className="text-navy">{mn.title}</span>
-                <span className="text-xs text-stone-400">
-                  &mdash; {formatShortDate(mn.date)}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
       {/* Notes */}
       <section className="border-t border-stone-200 py-4">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-xs font-sans font-semibold uppercase tracking-widest text-stone-400">
             Notes
           </h2>
-          <AddNoteForm entityType="person" entityId={person.id} />
+          <AddNoteForm entityType="organisation" entityId={org.id} />
         </div>
         {notes.length === 0 ? (
           <p className="text-sm text-stone-400">No notes yet.</p>

@@ -136,7 +136,13 @@ export async function PATCH(
         `UPDATE todos SET ${setClauses.join(", ")} WHERE id = ?`
       ).run(...setParams, id);
 
+      const todoTitle = (db.prepare("SELECT title FROM todos WHERE id = ?").get(id) as { title: string } | undefined)?.title || id;
       const logId = crypto.randomUUID();
+      const description = body.archived
+        ? `Archived '${todoTitle}'`
+        : body.status === 'done'
+        ? `Completed '${todoTitle}'`
+        : `Updated '${todoTitle}'`;
       db.prepare(
         `INSERT INTO activity_log (id, action, entity_type, entity_id, user_id, description, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?)`
@@ -146,7 +152,7 @@ export async function PATCH(
         "todo",
         id,
         session.userId,
-        `Updated todo fields`,
+        description,
         now
       );
     }
@@ -157,6 +163,8 @@ export async function PATCH(
         "INSERT OR IGNORE INTO todo_people (todo_id, person_id) VALUES (?, ?)"
       ).run(id, body.link_person_id);
 
+      const person = db.prepare("SELECT name FROM people WHERE id = ?").get(body.link_person_id) as { name: string } | undefined;
+      const todo = db.prepare("SELECT title FROM todos WHERE id = ?").get(id) as { title: string } | undefined;
       const logId = crypto.randomUUID();
       db.prepare(
         `INSERT INTO activity_log (id, action, entity_type, entity_id, user_id, description, created_at)
@@ -167,7 +175,7 @@ export async function PATCH(
         "todo",
         id,
         session.userId,
-        `Linked person to todo`,
+        `Linked ${person?.name || 'person'} to '${todo?.title || 'todo'}'`,
         now
       );
     }
@@ -177,6 +185,8 @@ export async function PATCH(
         "INSERT OR IGNORE INTO card_todos (card_id, todo_id) VALUES (?, ?)"
       ).run(body.link_card_id, id);
 
+      const card = db.prepare("SELECT title FROM cards WHERE id = ?").get(body.link_card_id) as { title: string } | undefined;
+      const todo = db.prepare("SELECT title FROM todos WHERE id = ?").get(id) as { title: string } | undefined;
       const logId = crypto.randomUUID();
       db.prepare(
         `INSERT INTO activity_log (id, action, entity_type, entity_id, user_id, description, created_at)
@@ -187,7 +197,7 @@ export async function PATCH(
         "todo",
         id,
         session.userId,
-        `Linked card to todo`,
+        `Linked card '${card?.title || 'card'}' to '${todo?.title || 'todo'}'`,
         now
       );
     }
@@ -197,6 +207,8 @@ export async function PATCH(
         "INSERT OR IGNORE INTO todo_refs (todo_id, ref_id) VALUES (?, ?)"
       ).run(id, body.link_ref_id);
 
+      const ref = db.prepare("SELECT title FROM refs WHERE id = ?").get(body.link_ref_id) as { title: string } | undefined;
+      const todo = db.prepare("SELECT title FROM todos WHERE id = ?").get(id) as { title: string } | undefined;
       const logId = crypto.randomUUID();
       db.prepare(
         `INSERT INTO activity_log (id, action, entity_type, entity_id, user_id, description, created_at)
@@ -207,7 +219,7 @@ export async function PATCH(
         "todo",
         id,
         session.userId,
-        `Linked reference to todo`,
+        `Linked reference '${ref?.title || 'reference'}' to '${todo?.title || 'todo'}'`,
         now
       );
     }

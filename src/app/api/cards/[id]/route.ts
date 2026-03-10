@@ -158,10 +158,11 @@ export async function PATCH(
         `UPDATE cards SET ${setClauses.join(", ")} WHERE id = ?`
       ).run(...setParams, id);
 
+      const cardTitle = (db.prepare("SELECT title FROM cards WHERE id = ?").get(id) as { title: string } | undefined)?.title || id;
       const logId = crypto.randomUUID();
       const description = body.archived
-        ? `Archived card`
-        : `Updated card fields`;
+        ? `Archived '${cardTitle}'`
+        : `Updated '${cardTitle}'`;
       db.prepare(
         `INSERT INTO activity_log (id, action, entity_type, entity_id, user_id, description, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?)`
@@ -174,6 +175,8 @@ export async function PATCH(
         "INSERT OR IGNORE INTO card_people (card_id, person_id) VALUES (?, ?)"
       ).run(id, body.link_person_id);
 
+      const person = db.prepare("SELECT name FROM people WHERE id = ?").get(body.link_person_id) as { name: string } | undefined;
+      const card = db.prepare("SELECT title FROM cards WHERE id = ?").get(id) as { title: string } | undefined;
       const logId = crypto.randomUUID();
       db.prepare(
         `INSERT INTO activity_log (id, action, entity_type, entity_id, user_id, description, created_at)
@@ -184,7 +187,7 @@ export async function PATCH(
         "card",
         id,
         session.userId,
-        `Linked person to card`,
+        `Linked ${person?.name || 'person'} to '${card?.title || 'card'}'`,
         now
       );
     }
@@ -194,6 +197,8 @@ export async function PATCH(
         "INSERT OR IGNORE INTO card_todos (card_id, todo_id) VALUES (?, ?)"
       ).run(id, body.link_todo_id);
 
+      const todo = db.prepare("SELECT title FROM todos WHERE id = ?").get(body.link_todo_id) as { title: string } | undefined;
+      const card = db.prepare("SELECT title FROM cards WHERE id = ?").get(id) as { title: string } | undefined;
       const logId = crypto.randomUUID();
       db.prepare(
         `INSERT INTO activity_log (id, action, entity_type, entity_id, user_id, description, created_at)
@@ -204,7 +209,7 @@ export async function PATCH(
         "card",
         id,
         session.userId,
-        `Linked todo to card`,
+        `Linked todo '${todo?.title || 'todo'}' to '${card?.title || 'card'}'`,
         now
       );
     }
@@ -214,6 +219,8 @@ export async function PATCH(
         "INSERT OR IGNORE INTO card_refs (card_id, ref_id) VALUES (?, ?)"
       ).run(id, body.link_ref_id);
 
+      const ref = db.prepare("SELECT title FROM refs WHERE id = ?").get(body.link_ref_id) as { title: string } | undefined;
+      const card = db.prepare("SELECT title FROM cards WHERE id = ?").get(id) as { title: string } | undefined;
       const logId = crypto.randomUUID();
       db.prepare(
         `INSERT INTO activity_log (id, action, entity_type, entity_id, user_id, description, created_at)
@@ -224,7 +231,7 @@ export async function PATCH(
         "card",
         id,
         session.userId,
-        `Linked reference to card`,
+        `Linked reference '${ref?.title || 'reference'}' to '${card?.title || 'card'}'`,
         now
       );
     }
@@ -234,6 +241,8 @@ export async function PATCH(
         "INSERT OR IGNORE INTO card_meeting_notes (card_id, meeting_note_id) VALUES (?, ?)"
       ).run(id, body.link_meeting_note_id);
 
+      const mn = db.prepare("SELECT title FROM meeting_notes WHERE id = ?").get(body.link_meeting_note_id) as { title: string } | undefined;
+      const card = db.prepare("SELECT title FROM cards WHERE id = ?").get(id) as { title: string } | undefined;
       const logId = crypto.randomUUID();
       db.prepare(
         `INSERT INTO activity_log (id, action, entity_type, entity_id, user_id, description, created_at)
@@ -244,7 +253,7 @@ export async function PATCH(
         "card",
         id,
         session.userId,
-        `Linked meeting note to card`,
+        `Linked meeting note '${mn?.title || 'meeting note'}' to '${card?.title || 'card'}'`,
         now
       );
     }

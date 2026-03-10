@@ -65,7 +65,7 @@ const SECTION_CONFIG: {
   {
     key: "organisations",
     label: "Organisations",
-    getHref: (r) => `/people`,
+    getHref: (r) => `/people/org/${r.id}`,
     getTitle: (r) => r.name ?? "Unknown",
     getPreview: (r) => r.summary ?? "",
   },

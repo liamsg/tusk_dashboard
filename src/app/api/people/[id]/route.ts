@@ -91,10 +91,11 @@ export async function PATCH(
         `UPDATE people SET ${setClauses.join(", ")} WHERE id = ?`
       ).run(...setParams, id);
 
+      const personName = (db.prepare("SELECT name FROM people WHERE id = ?").get(id) as { name: string } | undefined)?.name || id;
       const logId = crypto.randomUUID();
       const description = body.archived
-        ? `Archived person`
-        : `Updated person`;
+        ? `Archived ${personName}`
+        : `Updated ${personName}`;
       db.prepare(
         `INSERT INTO activity_log (id, action, entity_type, entity_id, user_id, description, created_at)
          VALUES (?, ?, ?, ?, ?, ?, ?)`

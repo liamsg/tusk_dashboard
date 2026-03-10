@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { requireSession } from "@/lib/auth";
 import { getDb } from "@/lib/db";
 import Link from "next/link";
+import { MilestonesSection } from "@/components/MilestonesSection";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -333,7 +334,11 @@ export default async function DashboardPage() {
         return wsId ? `/browse/${wsId}` : "/browse";
       }
       case "organisation":
-        return "/people";
+        return `/people/org/${act.entity_id}`;
+      case "note":
+      case "ref":
+      case "milestone":
+        return null;
       default:
         return null;
     }
@@ -362,7 +367,12 @@ export default async function DashboardPage() {
           {formatDate(today)}
         </p>
         <h1 className="mt-1 text-2xl font-heading text-navy">
-          Good morning, {firstName}.
+          {(() => {
+            const hour = new Date().getHours();
+            if (hour < 12) return "Good morning";
+            if (hour < 18) return "Good afternoon";
+            return "Good evening";
+          })()}, {firstName}.
         </h1>
       </header>
 
@@ -383,7 +393,7 @@ export default async function DashboardPage() {
               return (
                 <li key={todo.id} className="text-sm">
                   <span className="text-amber-warn mr-1.5">&#9888;</span>
-                  <span className="font-medium text-navy">{todo.title}</span>
+                  <Link href={`/todos/${todo.id}`} className="font-medium text-navy hover:underline">{todo.title}</Link>
                   <span className="text-amber-warn ml-1.5">
                     {days}d overdue
                   </span>
@@ -459,35 +469,7 @@ export default async function DashboardPage() {
         <h2 className="text-xs font-sans font-semibold uppercase tracking-widest text-stone-400 mb-3">
           Key Milestones
         </h2>
-        {milestones.length === 0 ? (
-          <p className="text-sm text-stone-500">No milestones set yet.</p>
-        ) : (
-          <ul className="space-y-2">
-            {milestones.map((ms) => {
-              const days = ms.target_date ? daysFromNow(ms.target_date) : null;
-              const shortDate = ms.target_date
-                ? new Date(ms.target_date + (ms.target_date.includes("T") ? "" : "T00:00:00"))
-                    .toLocaleDateString("en-GB", { day: "numeric", month: "short" })
-                : null;
-              return (
-                <li key={ms.id} className="text-sm flex items-baseline gap-2">
-                  <span className="font-medium text-navy">{ms.title}</span>
-                  <span className="flex-1 border-b border-dotted border-stone-300" />
-                  {shortDate ? (
-                    <span className="text-stone-500 whitespace-nowrap tabular-nums">
-                      {shortDate}{" "}
-                      <span className="text-stone-400">
-                        ({days !== null && days >= 0 ? `${days} days` : `${Math.abs(days!)}d ago`})
-                      </span>
-                    </span>
-                  ) : (
-                    <span className="text-stone-400">No date set</span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
+        <MilestonesSection milestones={milestones} />
       </section>
 
       {/* ── What's Been Happening ──────────────────────────────────────── */}
@@ -584,7 +566,7 @@ export default async function DashboardPage() {
             {flaggedCards.map((card) => (
               <li key={card.id} className="text-sm flex items-baseline gap-2">
                 <span className="text-amber-warn text-xs">&#9873;</span>
-                <span className="font-medium text-navy">{card.title}</span>
+                <Link href={`/cards/${card.id}`} className="font-medium text-navy hover:underline">{card.title}</Link>
                 {card.flagger_name && (
                   <span className="text-stone-400 text-xs">
                     — flagged by {card.flagger_name}
@@ -609,7 +591,7 @@ function TodoLine({ todo, showPerson }: { todo: WeekTodo; showPerson?: boolean }
     <li className="flex items-start gap-2.5 text-sm">
       <span className="mt-0.5 h-4 w-4 flex-shrink-0 rounded border border-stone-300 bg-white" />
       <div className="min-w-0">
-        <span className="text-navy">{todo.title}</span>
+        <Link href={`/todos/${todo.id}`} className="text-navy hover:underline">{todo.title}</Link>
         {todo.due_date && (
           <span className="text-stone-400 ml-1.5 text-xs">
             {relativeDay(todo.due_date)}

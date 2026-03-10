@@ -145,9 +145,12 @@ export function PeopleSearch({ organisations, orphanPeople }: PeopleSearchProps)
           {filtered.orgs.map((org) => (
             <div key={org.id}>
               <div className="flex items-baseline gap-2 mb-1.5">
-                <span className="font-medium text-base text-navy">
+                <Link
+                  href={`/people/org/${org.id}`}
+                  className="font-medium text-base text-navy hover:underline"
+                >
                   {org.name}
-                </span>
+                </Link>
                 {org.org_type && (
                   <span className="text-sm text-stone-400">
                     &middot; {org.org_type}

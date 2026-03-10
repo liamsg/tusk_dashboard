@@ -84,6 +84,17 @@ export async function POST(request: NextRequest) {
       db.prepare(
         "INSERT INTO ref_entities (ref_id, entity_type, entity_id) VALUES (?, ?, ?)"
       ).run(id, entity_type, entity_id);
+
+      // Also insert into the specific junction table so refs appear on detail pages
+      if (entity_type === "card") {
+        db.prepare(
+          "INSERT OR IGNORE INTO card_refs (card_id, ref_id) VALUES (?, ?)"
+        ).run(entity_id, id);
+      } else if (entity_type === "todo") {
+        db.prepare(
+          "INSERT OR IGNORE INTO todo_refs (todo_id, ref_id) VALUES (?, ?)"
+        ).run(entity_id, id);
+      }
     }
 
     const logId = crypto.randomUUID();

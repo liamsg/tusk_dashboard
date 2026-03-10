@@ -98,7 +98,29 @@ export async function POST(request: NextRequest) {
       now
     );
 
+    // Look up entity name for a descriptive activity log message
+    let entityName = '';
+    if (entity_type === 'card') {
+      const card = db.prepare('SELECT title FROM cards WHERE id = ?').get(entity_id) as { title: string } | undefined;
+      entityName = card?.title || entity_id;
+    } else if (entity_type === 'todo') {
+      const todo = db.prepare('SELECT title FROM todos WHERE id = ?').get(entity_id) as { title: string } | undefined;
+      entityName = todo?.title || entity_id;
+    } else if (entity_type === 'person') {
+      const person = db.prepare('SELECT name FROM people WHERE id = ?').get(entity_id) as { name: string } | undefined;
+      entityName = person?.name || entity_id;
+    } else if (entity_type === 'organisation') {
+      const org = db.prepare('SELECT name FROM organisations WHERE id = ?').get(entity_id) as { name: string } | undefined;
+      entityName = org?.name || entity_id;
+    } else if (entity_type === 'meeting_note') {
+      const mn = db.prepare('SELECT title FROM meeting_notes WHERE id = ?').get(entity_id) as { title: string } | undefined;
+      entityName = mn?.title || entity_id;
+    }
+
     const logId = crypto.randomUUID();
+    const logDescription = entityName
+      ? `Added note to '${entityName}'`
+      : `Added note to ${entity_type}`;
     db.prepare(
       `INSERT INTO activity_log (id, action, entity_type, entity_id, user_id, description, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?)`
@@ -108,7 +130,7 @@ export async function POST(request: NextRequest) {
       "note",
       id,
       session.userId,
-      `Added note to ${entity_type}`,
+      logDescription,
       now
     );
 
