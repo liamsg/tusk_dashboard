@@ -36,7 +36,7 @@ export function ArchiveButton({ cardId }: ArchiveButtonProps) {
       type="button"
       onClick={handleArchive}
       disabled={submitting}
-      className="rounded border border-stone-200 px-3 py-1.5 text-xs text-stone-400 hover:text-amber-warn hover:border-amber-warn transition-colors disabled:opacity-40"
+      className="rounded border border-stone-200 px-3 py-2 text-xs text-stone-400 hover:text-amber-warn hover:border-amber-warn transition-colors disabled:opacity-40"
     >
       {submitting ? "Archiving..." : "Archive"}
     </button>

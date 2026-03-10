@@ -83,7 +83,7 @@ export function EditableTitle({ value, onSave, className = "" }: EditableTitlePr
     >
       <span>{value}</span>
       <svg
-        className="h-3 w-3 text-stone-300 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
+        className="h-3 w-3 text-stone-300 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex-shrink-0"
         fill="none"
         viewBox="0 0 24 24"
         stroke="currentColor"

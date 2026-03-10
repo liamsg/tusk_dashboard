@@ -46,7 +46,7 @@ export function EditNoteContent({ meetingNoteId, content }: EditNoteContentProps
             type="button"
             onClick={handleSave}
             disabled={saving}
-            className="rounded bg-navy px-3 py-1.5 text-xs text-white hover:bg-navy-light disabled:opacity-40 transition-colors"
+            className="rounded bg-navy px-3 py-2 text-xs text-white hover:bg-navy-light disabled:opacity-40 transition-colors"
           >
             {saving ? "Saving..." : "Save"}
           </button>
@@ -56,7 +56,7 @@ export function EditNoteContent({ meetingNoteId, content }: EditNoteContentProps
               setValue(content || "");
               setEditing(false);
             }}
-            className="text-xs text-stone-400 hover:text-navy transition-colors"
+            className="text-xs text-stone-400 hover:text-navy transition-colors px-3 py-2"
           >
             Cancel
           </button>
@@ -74,7 +74,7 @@ export function EditNoteContent({ meetingNoteId, content }: EditNoteContentProps
         <button
           type="button"
           onClick={() => setEditing(true)}
-          className="text-stone-300 hover:text-navy transition-colors"
+          className="text-stone-300 hover:text-navy transition-colors p-2"
           aria-label="Edit content"
           title="Edit content"
         >

@@ -137,12 +137,12 @@ function TodoItem({
   return (
     <div className="group px-4 py-3 flex items-start gap-3">
       {/* Reorder buttons — subtle, visible on row hover */}
-      <span className="flex flex-col items-center mt-0.5 flex-shrink-0 leading-none text-sm select-none opacity-0 group-hover:opacity-100 transition-opacity">
+      <span className="flex flex-col items-center mt-0.5 flex-shrink-0 leading-none text-sm select-none opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
         {!isFirst ? (
           <button
             type="button"
             onClick={onMoveUp}
-            className="text-stone-300 hover:text-stone-600 leading-none"
+            className="text-stone-300 hover:text-stone-600 leading-none min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 flex items-center justify-center"
             aria-label="Move up"
           >
             &#9650;
@@ -154,7 +154,7 @@ function TodoItem({
           <button
             type="button"
             onClick={onMoveDown}
-            className="text-stone-300 hover:text-stone-600 leading-none"
+            className="text-stone-300 hover:text-stone-600 leading-none min-w-[44px] min-h-[44px] md:min-w-0 md:min-h-0 flex items-center justify-center"
             aria-label="Move down"
           >
             &#9660;
@@ -517,7 +517,7 @@ export default function TodoList({
           <button
             type="button"
             onClick={() => setViewMode("my")}
-            className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+            className={`px-4 py-2 text-xs font-medium transition-colors ${
               viewMode === "my"
                 ? "bg-navy text-white"
                 : "bg-white text-stone-500 hover:text-navy"
@@ -528,7 +528,7 @@ export default function TodoList({
           <button
             type="button"
             onClick={() => setViewMode("all")}
-            className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+            className={`px-4 py-2 text-xs font-medium transition-colors ${
               viewMode === "all"
                 ? "bg-navy text-white"
                 : "bg-white text-stone-500 hover:text-navy"

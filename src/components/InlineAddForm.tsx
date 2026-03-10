@@ -57,7 +57,7 @@ export function InlineAddForm({
       <button
         type="button"
         onClick={handleOpen}
-        className="text-xs text-stone-400 hover:text-navy transition-colors"
+        className="text-xs text-stone-400 hover:text-navy transition-colors py-2"
       >
         + {label}
       </button>
@@ -80,7 +80,7 @@ export function InlineAddForm({
         type="button"
         onClick={handleSubmit}
         disabled={submitting || !value.trim()}
-        className="rounded bg-navy px-2 py-1 text-xs text-white hover:bg-navy-light disabled:opacity-40 transition-colors"
+        className="rounded bg-navy px-3 py-2 text-xs text-white hover:bg-navy-light disabled:opacity-40 transition-colors"
       >
         {submitting ? "..." : "Save"}
       </button>
@@ -90,7 +90,7 @@ export function InlineAddForm({
           setValue("");
           setOpen(false);
         }}
-        className="text-xs text-stone-400 hover:text-navy transition-colors"
+        className="text-xs text-stone-400 hover:text-navy transition-colors px-3 py-2"
       >
         Cancel
       </button>

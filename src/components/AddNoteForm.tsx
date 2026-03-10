@@ -66,7 +66,7 @@ export function AddNoteForm({ entityType, entityId }: AddNoteFormProps) {
       <button
         type="button"
         onClick={handleOpen}
-        className="text-xs text-stone-400 hover:text-navy transition-colors"
+        className="text-xs text-stone-400 hover:text-navy transition-colors py-2"
       >
         + Add
       </button>
@@ -90,7 +90,7 @@ export function AddNoteForm({ entityType, entityId }: AddNoteFormProps) {
           type="button"
           onClick={handleSubmit}
           disabled={submitting || !content.trim()}
-          className="rounded bg-navy px-3 py-1 text-xs text-white hover:bg-navy-light disabled:opacity-40 transition-colors"
+          className="rounded bg-navy px-3 py-2 text-xs text-white hover:bg-navy-light disabled:opacity-40 transition-colors"
         >
           {submitting ? "Saving..." : "Save"}
         </button>
@@ -100,7 +100,7 @@ export function AddNoteForm({ entityType, entityId }: AddNoteFormProps) {
             setContent("");
             setOpen(false);
           }}
-          className="text-xs text-stone-400 hover:text-navy transition-colors"
+          className="text-xs text-stone-400 hover:text-navy transition-colors px-3 py-2"
         >
           Cancel
         </button>

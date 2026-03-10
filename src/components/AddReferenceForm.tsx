@@ -82,7 +82,7 @@ export function AddReferenceForm({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="text-xs text-stone-400 hover:text-navy transition-colors"
+        className="text-xs text-stone-400 hover:text-navy transition-colors py-2"
       >
         + Add
       </button>
@@ -143,14 +143,14 @@ export function AddReferenceForm({
           type="button"
           onClick={handleSubmit}
           disabled={submitting || !title.trim() || !detail.trim()}
-          className="rounded bg-navy px-3 py-1.5 text-xs text-white hover:bg-navy-light disabled:opacity-40 transition-colors"
+          className="rounded bg-navy px-3 py-2 text-xs text-white hover:bg-navy-light disabled:opacity-40 transition-colors"
         >
           {submitting ? "Saving..." : "Save Reference"}
         </button>
         <button
           type="button"
           onClick={resetForm}
-          className="text-xs text-stone-400 hover:text-navy transition-colors"
+          className="text-xs text-stone-400 hover:text-navy transition-colors px-3 py-2"
         >
           Cancel
         </button>

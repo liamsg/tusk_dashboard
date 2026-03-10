@@ -23,8 +23,8 @@ export function ViewToggle({ currentView, workstreamId }: ViewToggleProps) {
         onClick={() => switchView("briefing")}
         className={
           currentView === "briefing"
-            ? "bg-navy text-white rounded px-3 py-1 text-sm"
-            : "text-stone-500 hover:text-navy px-3 py-1 text-sm transition-colors"
+            ? "bg-navy text-white rounded px-4 py-2 text-sm"
+            : "text-stone-500 hover:text-navy px-4 py-2 text-sm transition-colors"
         }
       >
         Briefing
@@ -33,8 +33,8 @@ export function ViewToggle({ currentView, workstreamId }: ViewToggleProps) {
         onClick={() => switchView("cards")}
         className={
           currentView === "cards"
-            ? "bg-navy text-white rounded px-3 py-1 text-sm"
-            : "text-stone-500 hover:text-navy px-3 py-1 text-sm transition-colors"
+            ? "bg-navy text-white rounded px-4 py-2 text-sm"
+            : "text-stone-500 hover:text-navy px-4 py-2 text-sm transition-colors"
         }
       >
         Cards

@@ -55,12 +55,12 @@ export function BottomNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-cream-dark bg-white">
-      <div className="flex items-center justify-around py-2">
+      <div className="flex items-center justify-around py-3">
         {navItems.map((item) => (
           <Link
             key={item.href}
             href={item.href}
-            className={`flex flex-col items-center px-2 py-1 text-xs transition-colors ${
+            className={`flex flex-col items-center px-3 py-2 text-xs transition-colors ${
               isActive(item.href)
                 ? "text-navy font-medium"
                 : "text-navy-light hover:text-navy"
@@ -74,7 +74,7 @@ export function BottomNav() {
         <div ref={moreRef} className="relative">
           <button
             onClick={() => setMoreOpen((o) => !o)}
-            className={`flex flex-col items-center px-2 py-1 text-xs transition-colors ${
+            className={`flex flex-col items-center px-3 py-2 text-xs transition-colors ${
               isMoreActive || moreOpen
                 ? "text-navy font-medium"
                 : "text-navy-light hover:text-navy"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 
 // ── Types ───────────────────────────────────────────────────────────────────
@@ -100,6 +100,9 @@ const SECTION_CONFIG: {
   },
 ];
 
+// Quick-add pattern: "+ card Title" or "+ todo Title"
+const QUICK_ADD_RE = /^\+\s*(card|todo)\s+(.+)/i;
+
 // ── Component ───────────────────────────────────────────────────────────────
 
 export function SearchDialog() {
@@ -107,7 +110,10 @@ export function SearchDialog() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResults | null>(null);
   const [loading, setLoading] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
+  const resultsRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const router = useRouter();
 
@@ -116,6 +122,7 @@ export function SearchDialog() {
     setIsOpen(true);
     setQuery("");
     setResults(null);
+    setActiveIndex(-1);
     setTimeout(() => inputRef.current?.focus(), 0);
   }, []);
 
@@ -123,6 +130,7 @@ export function SearchDialog() {
     setIsOpen(false);
     setQuery("");
     setResults(null);
+    setActiveIndex(-1);
   }, []);
 
   // Keyboard shortcut (Cmd+K / Ctrl+K)
@@ -151,11 +159,18 @@ export function SearchDialog() {
     return () => window.removeEventListener("open-search", handler);
   }, [open]);
 
-  // Debounced search
+  // Check for quick-add pattern
+  const quickAdd = useMemo(() => {
+    const match = query.match(QUICK_ADD_RE);
+    if (!match) return null;
+    return { type: match[1].toLowerCase() as "card" | "todo", name: match[2].trim() };
+  }, [query]);
+
+  // Debounced search (skip if quick-add pattern)
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
 
-    if (!query.trim()) {
+    if (!query.trim() || quickAdd) {
       setResults(null);
       setLoading(false);
       return;
@@ -170,6 +185,7 @@ export function SearchDialog() {
         if (res.ok) {
           const data = await res.json();
           setResults(data);
+          setActiveIndex(-1);
         }
       } catch {
         // ignore
@@ -181,19 +197,116 @@ export function SearchDialog() {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [query]);
+  }, [query, quickAdd]);
+
+  // Flat list of navigable items for keyboard nav
+  const flatItems = useMemo(() => {
+    if (!results) return [];
+    const items: { href: string; id: string }[] = [];
+    for (const section of SECTION_CONFIG) {
+      const sectionItems = results[section.key];
+      if (!sectionItems || sectionItems.length === 0) continue;
+      for (const item of sectionItems) {
+        items.push({ href: section.getHref(item), id: item.id });
+      }
+    }
+    return items;
+  }, [results]);
 
   // Navigate and close
-  const navigateTo = (href: string) => {
+  const navigateTo = useCallback((href: string) => {
     close();
     router.push(href);
-  };
+  }, [close, router]);
+
+  // Quick-add handler
+  const handleQuickAdd = useCallback(async () => {
+    if (!quickAdd || !quickAdd.name || creating) return;
+    setCreating(true);
+    try {
+      if (quickAdd.type === "card") {
+        const res = await fetch("/api/cards", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: quickAdd.name }),
+        });
+        if (res.ok) {
+          const card = await res.json();
+          close();
+          router.push(`/cards/${card.id}`);
+          router.refresh();
+        }
+      } else {
+        // For todo, we need assigned_to — fetch current user from session
+        const meRes = await fetch("/api/auth/me");
+        let assignedTo: string | undefined;
+        if (meRes.ok) {
+          const me = await meRes.json();
+          assignedTo = me.userId;
+        }
+        const res = await fetch("/api/todos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: quickAdd.name, assigned_to: assignedTo }),
+        });
+        if (res.ok) {
+          const todo = await res.json();
+          close();
+          router.push(`/todos/${todo.id}`);
+          router.refresh();
+        }
+      }
+    } catch {
+      // ignore
+    } finally {
+      setCreating(false);
+    }
+  }, [quickAdd, creating, close, router]);
+
+  // Keyboard navigation within results
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (quickAdd && e.key === "Enter") {
+      e.preventDefault();
+      handleQuickAdd();
+      return;
+    }
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setActiveIndex((prev) => {
+        const next = prev + 1;
+        return next >= flatItems.length ? 0 : next;
+      });
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActiveIndex((prev) => {
+        const next = prev - 1;
+        return next < 0 ? flatItems.length - 1 : next;
+      });
+    } else if (e.key === "Enter" && activeIndex >= 0 && activeIndex < flatItems.length) {
+      e.preventDefault();
+      navigateTo(flatItems[activeIndex].href);
+    }
+  }, [quickAdd, handleQuickAdd, flatItems, activeIndex, navigateTo]);
+
+  // Scroll active item into view
+  useEffect(() => {
+    if (activeIndex < 0 || !resultsRef.current) return;
+    const buttons = resultsRef.current.querySelectorAll("[data-result-item]");
+    const activeButton = buttons[activeIndex];
+    if (activeButton) {
+      activeButton.scrollIntoView({ block: "nearest" });
+    }
+  }, [activeIndex]);
 
   if (!isOpen) return null;
 
   const hasResults =
     results &&
     SECTION_CONFIG.some((s) => (results[s.key]?.length ?? 0) > 0);
+
+  // Track running index across sections for keyboard nav
+  let runningIndex = 0;
 
   return (
     <div
@@ -228,7 +341,8 @@ export function SearchDialog() {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search cards, to-dos, people..."
+            onKeyDown={handleKeyDown}
+            placeholder="Search or type + card / + todo to create..."
             className="flex-1 bg-transparent text-sm text-navy placeholder:text-stone-400 focus:outline-none"
           />
           <kbd className="hidden sm:inline-block rounded border border-stone-200 px-1.5 py-0.5 text-[10px] text-stone-400">
@@ -237,14 +351,43 @@ export function SearchDialog() {
         </div>
 
         {/* Results */}
-        <div className="max-h-80 overflow-y-auto">
+        <div className="max-h-80 overflow-y-auto" ref={resultsRef}>
+          {/* Quick-add prompt */}
+          {quickAdd && quickAdd.name && (
+            <div className="px-4 py-4">
+              <button
+                onClick={handleQuickAdd}
+                disabled={creating}
+                className="w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-lg bg-cream hover:bg-cream-dark transition-colors"
+              >
+                <span className="flex items-center justify-center h-6 w-6 rounded bg-navy text-white text-xs font-bold">
+                  +
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium text-navy">
+                    {creating ? "Creating..." : `Create ${quickAdd.type}: "${quickAdd.name}"`}
+                  </p>
+                  <p className="text-xs text-stone-400">
+                    Press Enter to create
+                  </p>
+                </div>
+              </button>
+            </div>
+          )}
+
+          {quickAdd && !quickAdd.name && (
+            <div className="px-4 py-6 text-center text-sm text-stone-400">
+              Type a name after &ldquo;+ {quickAdd.type}&rdquo; to create
+            </div>
+          )}
+
           {loading && (
             <div className="px-4 py-6 text-center text-sm text-stone-400">
               Searching...
             </div>
           )}
 
-          {!loading && query.trim() && !hasResults && (
+          {!loading && !quickAdd && query.trim() && !hasResults && (
             <div className="px-4 py-6 text-center text-sm text-stone-400">
               No results found for &ldquo;{query}&rdquo;
             </div>
@@ -256,6 +399,38 @@ export function SearchDialog() {
                 const items = results![section.key];
                 if (!items || items.length === 0) return null;
 
+                const sectionItems = items.map((item) => {
+                  const itemIndex = runningIndex++;
+                  return (
+                    <button
+                      key={item.id}
+                      data-result-item
+                      onClick={() => navigateTo(section.getHref(item))}
+                      className={`flex w-full items-start gap-3 px-4 py-2 text-left transition-colors ${
+                        itemIndex === activeIndex
+                          ? "bg-cream"
+                          : "hover:bg-cream"
+                      }`}
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-navy">
+                          {section.getTitle(item)}
+                        </p>
+                        {section.getPreview(item) && (
+                          <p className="truncate text-xs text-stone-400">
+                            {section.getPreview(item)}
+                          </p>
+                        )}
+                      </div>
+                      {item.status && (
+                        <span className="shrink-0 text-[10px] text-stone-400">
+                          {item.status.replace("_", " ")}
+                        </span>
+                      )}
+                    </button>
+                  );
+                });
+
                 return (
                   <div key={section.key}>
                     <div className="px-4 pt-3 pb-1">
@@ -263,38 +438,16 @@ export function SearchDialog() {
                         {section.label}
                       </span>
                     </div>
-                    {items.map((item) => (
-                      <button
-                        key={item.id}
-                        onClick={() => navigateTo(section.getHref(item))}
-                        className="flex w-full items-start gap-3 px-4 py-2 text-left hover:bg-cream transition-colors"
-                      >
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate text-sm font-medium text-navy">
-                            {section.getTitle(item)}
-                          </p>
-                          {section.getPreview(item) && (
-                            <p className="truncate text-xs text-stone-400">
-                              {section.getPreview(item)}
-                            </p>
-                          )}
-                        </div>
-                        {item.status && (
-                          <span className="shrink-0 text-[10px] text-stone-400">
-                            {item.status.replace("_", " ")}
-                          </span>
-                        )}
-                      </button>
-                    ))}
+                    {sectionItems}
                   </div>
                 );
               })}
             </div>
           )}
 
-          {!loading && !query.trim() && (
+          {!loading && !quickAdd && !query.trim() && (
             <div className="px-4 py-6 text-center text-sm text-stone-400">
-              Start typing to search across everything
+              Start typing to search, or <span className="font-medium">+ card</span> / <span className="font-medium">+ todo</span> to create
             </div>
           )}
         </div>

@@ -41,7 +41,7 @@ export function FlagButton({ cardId, flagged }: FlagButtonProps) {
           type="button"
           onClick={handleToggle}
           disabled={submitting}
-          className="text-xs text-stone-400 hover:text-navy transition-colors disabled:opacity-40"
+          className="text-xs text-stone-400 hover:text-navy transition-colors disabled:opacity-40 px-3 py-2"
         >
           {submitting ? "..." : "Unflag"}
         </button>
@@ -54,7 +54,7 @@ export function FlagButton({ cardId, flagged }: FlagButtonProps) {
       type="button"
       onClick={handleToggle}
       disabled={submitting}
-      className="rounded border border-stone-200 px-3 py-1.5 text-xs text-stone-400 hover:text-amber-600 hover:border-amber-400 transition-colors disabled:opacity-40"
+      className="rounded border border-stone-200 px-3 py-2 text-xs text-stone-400 hover:text-amber-600 hover:border-amber-400 transition-colors disabled:opacity-40"
     >
       {submitting ? "Flagging..." : "Flag for discussion"}
     </button>
