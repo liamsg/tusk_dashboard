@@ -201,6 +201,8 @@ export async function PATCH(
         "INSERT OR IGNORE INTO card_meeting_notes (card_id, meeting_note_id) VALUES (?, ?)"
       ).run(body.link_card_id, id);
 
+      const card = db.prepare("SELECT title FROM cards WHERE id = ?").get(body.link_card_id) as { title: string } | undefined;
+      const mn = db.prepare("SELECT title FROM meeting_notes WHERE id = ?").get(id) as { title: string } | undefined;
       const logId = crypto.randomUUID();
       db.prepare(
         `INSERT INTO activity_log (id, action, entity_type, entity_id, user_id, description, created_at)
@@ -211,7 +213,7 @@ export async function PATCH(
         "meeting_note",
         id,
         session.userId,
-        `Linked card to meeting note`,
+        `Linked card '${card?.title || 'card'}' to meeting note '${mn?.title || 'meeting note'}'`,
         now
       );
     }
@@ -221,6 +223,8 @@ export async function PATCH(
         "INSERT OR IGNORE INTO meeting_note_todos (meeting_note_id, todo_id) VALUES (?, ?)"
       ).run(id, body.link_todo_id);
 
+      const todo = db.prepare("SELECT title FROM todos WHERE id = ?").get(body.link_todo_id) as { title: string } | undefined;
+      const mn = db.prepare("SELECT title FROM meeting_notes WHERE id = ?").get(id) as { title: string } | undefined;
       const logId = crypto.randomUUID();
       db.prepare(
         `INSERT INTO activity_log (id, action, entity_type, entity_id, user_id, description, created_at)
@@ -231,7 +235,7 @@ export async function PATCH(
         "meeting_note",
         id,
         session.userId,
-        `Linked todo to meeting note`,
+        `Linked todo '${todo?.title || 'todo'}' to meeting note '${mn?.title || 'meeting note'}'`,
         now
       );
     }
@@ -241,6 +245,8 @@ export async function PATCH(
         "INSERT OR IGNORE INTO meeting_note_people (meeting_note_id, person_id) VALUES (?, ?)"
       ).run(id, body.link_person_id);
 
+      const person = db.prepare("SELECT name FROM people WHERE id = ?").get(body.link_person_id) as { name: string } | undefined;
+      const mn = db.prepare("SELECT title FROM meeting_notes WHERE id = ?").get(id) as { title: string } | undefined;
       const logId = crypto.randomUUID();
       db.prepare(
         `INSERT INTO activity_log (id, action, entity_type, entity_id, user_id, description, created_at)
@@ -251,7 +257,7 @@ export async function PATCH(
         "meeting_note",
         id,
         session.userId,
-        `Linked person to meeting note`,
+        `Linked person '${person?.name || 'person'}' to meeting note '${mn?.title || 'meeting note'}'`,
         now
       );
     }

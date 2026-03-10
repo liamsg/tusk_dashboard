@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { showToast } from "@/components/Toast";
 
 export function CreateOrgForm() {
   const [open, setOpen] = useState(false);
@@ -45,6 +46,7 @@ export function CreateOrgForm() {
 
       if (!res.ok) throw new Error("Failed to create organisation");
 
+      showToast("Organisation created");
       resetForm();
       router.refresh();
     } catch {

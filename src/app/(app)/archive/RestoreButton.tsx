@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { showToast } from "@/components/Toast";
 
 interface RestoreButtonProps {
   entityType: string;
@@ -29,6 +30,7 @@ export function RestoreButton({ entityType, entityId, apiPath }: RestoreButtonPr
 
       if (!res.ok) throw new Error("Failed to restore");
 
+      showToast("Item restored");
       router.refresh();
     } catch {
       setSubmitting(false);

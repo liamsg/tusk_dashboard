@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { showToast } from "@/components/Toast";
 
 interface AddTodoInlineProps {
   cardId: string;
@@ -48,6 +49,7 @@ export function AddTodoInline({ cardId, users }: AddTodoInlineProps) {
 
       if (!res.ok) throw new Error("Failed to add todo");
 
+      showToast("To-do created");
       resetForm();
       router.refresh();
     } catch {

@@ -1,6 +1,7 @@
 "use client";
 
 import { EditableTitle } from "@/components/EditableTitle";
+import { showToast } from "@/components/Toast";
 
 interface EditableSubcategoryNameProps {
   subcategoryId: string;
@@ -16,6 +17,7 @@ export function EditableSubcategoryName({ subcategoryId, name }: EditableSubcate
     });
 
     if (!res.ok) throw new Error("Failed to rename subcategory");
+    showToast("Subcategory renamed");
   };
 
   return (

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { showToast } from "@/components/Toast";
 
 interface TodoActionsProps {
   todoId: string;
@@ -36,6 +37,7 @@ export function TodoActions({
       });
       if (!res.ok) throw new Error("Failed to update todo");
       router.refresh();
+      return res;
     } catch {
       // revert on failure
     } finally {
@@ -43,24 +45,28 @@ export function TodoActions({
     }
   };
 
-  const handleToggleDone = () => {
+  const handleToggleDone = async () => {
     const newStatus = status === "done" ? "open" : "done";
     setStatus(newStatus);
-    patchTodo({ status: newStatus });
+    const res = await patchTodo({ status: newStatus });
+    if (res) showToast(newStatus === "done" ? "To-do completed" : "To-do reopened");
   };
 
-  const handleBallInCourtChange = (value: string) => {
+  const handleBallInCourtChange = async (value: string) => {
     setBallInCourt(value);
-    patchTodo({ ball_in_court: value });
+    const res = await patchTodo({ ball_in_court: value });
+    if (res) showToast("Status updated");
   };
 
-  const handleAssignedToChange = (value: string) => {
+  const handleAssignedToChange = async (value: string) => {
     setAssignedTo(value);
-    patchTodo({ assigned_to: value });
+    const res = await patchTodo({ assigned_to: value });
+    if (res) showToast("Status updated");
   };
 
-  const handleArchive = () => {
-    patchTodo({ archived: true });
+  const handleArchive = async () => {
+    const res = await patchTodo({ archived: true });
+    if (res) showToast("To-do archived");
   };
 
   const isDone = status === "done";

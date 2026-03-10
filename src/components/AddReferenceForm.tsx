@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { showToast } from "@/components/Toast";
 
 const REF_TYPES = [
   { value: "email", label: "Email" },
@@ -68,6 +69,7 @@ export function AddReferenceForm({
         });
       }
 
+      showToast("Reference added");
       resetForm();
       router.refresh();
     } catch {

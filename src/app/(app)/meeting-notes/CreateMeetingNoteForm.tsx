@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { showToast } from "@/components/Toast";
 
 interface PersonOption {
   id: string;
@@ -81,6 +82,7 @@ export function CreateMeetingNoteForm({ people }: CreateMeetingNoteFormProps) {
 
       if (!res.ok) throw new Error("Failed to create meeting note");
 
+      showToast("Meeting note created");
       resetForm();
       router.refresh();
     } catch {

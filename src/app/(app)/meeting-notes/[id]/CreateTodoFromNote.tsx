@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { showToast } from "@/components/Toast";
 
 interface UserOption {
   id: string;
@@ -19,7 +20,6 @@ export function CreateTodoFromNote({ meetingNoteId, users }: CreateTodoFromNoteP
   const [assignedTo, setAssignedTo] = useState(users[0]?.id || "");
   const [dueDate, setDueDate] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
   const router = useRouter();
 
   const resetForm = () => {
@@ -58,9 +58,8 @@ export function CreateTodoFromNote({ meetingNoteId, users }: CreateTodoFromNoteP
 
       if (!linkRes.ok) throw new Error("Failed to link todo");
 
+      showToast("To-do created and linked");
       resetForm();
-      setToast("To-do created and linked");
-      setTimeout(() => setToast(null), 3000);
       router.refresh();
     } catch {
       // keep form open
@@ -81,12 +80,6 @@ export function CreateTodoFromNote({ meetingNoteId, users }: CreateTodoFromNoteP
 
   return (
     <div>
-      {toast && (
-        <div className="mb-2 text-xs text-green-600 bg-green-50 rounded px-3 py-1.5">
-          {toast}
-        </div>
-      )}
-
       {!open ? (
         <button
           type="button"

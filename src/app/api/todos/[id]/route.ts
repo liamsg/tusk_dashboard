@@ -175,7 +175,7 @@ export async function PATCH(
         "todo",
         id,
         session.userId,
-        `Linked ${person?.name || 'person'} to '${todo?.title || 'todo'}'`,
+        `Linked person '${person?.name || 'person'}' to todo '${todo?.title || 'todo'}'`,
         now
       );
     }
@@ -197,7 +197,7 @@ export async function PATCH(
         "todo",
         id,
         session.userId,
-        `Linked card '${card?.title || 'card'}' to '${todo?.title || 'todo'}'`,
+        `Linked card '${card?.title || 'card'}' to todo '${todo?.title || 'todo'}'`,
         now
       );
     }
@@ -219,7 +219,7 @@ export async function PATCH(
         "todo",
         id,
         session.userId,
-        `Linked reference '${ref?.title || 'reference'}' to '${todo?.title || 'todo'}'`,
+        `Linked reference '${ref?.title || 'reference'}' to todo '${todo?.title || 'todo'}'`,
         now
       );
     }

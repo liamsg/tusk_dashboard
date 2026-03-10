@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { showToast } from "@/components/Toast";
 
 interface CardOption {
   id: string;
@@ -54,6 +55,7 @@ export function LinkItemToNote({
 
       if (!res.ok) throw new Error("Failed to link item");
 
+      showToast(linkType === "card" ? "Linked to card" : "Linked person");
       resetForm();
       router.refresh();
     } catch {

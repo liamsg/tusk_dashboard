@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { showToast } from "@/components/Toast";
 
 interface CreateTodoFormProps {
   users: { id: string; name: string }[];
@@ -66,6 +67,7 @@ export function CreateTodoForm({ users, currentUserId }: CreateTodoFormProps) {
 
       if (!res.ok) throw new Error("Failed to create todo");
 
+      showToast("To-do created");
       resetForm();
       router.refresh();
     } catch {

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { showToast } from "@/components/Toast";
 
 const STATUS_OPTIONS = [
   { value: "new", label: "New", dotClass: "bg-stone-400" },
@@ -39,6 +40,7 @@ export function StatusDropdown({ cardId, currentStatus }: StatusDropdownProps) {
         throw new Error("Failed to update status");
       }
 
+      showToast("Status updated");
       router.refresh();
     } catch {
       // reverted above

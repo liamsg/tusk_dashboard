@@ -111,6 +111,38 @@ export async function POST(request: NextRequest) {
       now
     );
 
+    // Log link activity on the target entity
+    if (entity_type && entity_id) {
+      let entityName = "";
+      let entityLabel = entity_type;
+      if (entity_type === "card") {
+        const card = db.prepare("SELECT title FROM cards WHERE id = ?").get(entity_id) as { title: string } | undefined;
+        entityName = card?.title || "card";
+        entityLabel = "card";
+      } else if (entity_type === "todo") {
+        const todo = db.prepare("SELECT title FROM todos WHERE id = ?").get(entity_id) as { title: string } | undefined;
+        entityName = todo?.title || "todo";
+        entityLabel = "todo";
+      } else if (entity_type === "meeting_note") {
+        const mn = db.prepare("SELECT title FROM meeting_notes WHERE id = ?").get(entity_id) as { title: string } | undefined;
+        entityName = mn?.title || "meeting note";
+        entityLabel = "meeting note";
+      }
+      const linkLogId = crypto.randomUUID();
+      db.prepare(
+        `INSERT INTO activity_log (id, action, entity_type, entity_id, user_id, description, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`
+      ).run(
+        linkLogId,
+        "linked",
+        entity_type,
+        entity_id,
+        session.userId,
+        `Linked reference '${title}' to ${entityLabel} '${entityName}'`,
+        now
+      );
+    }
+
     const created = db.prepare("SELECT * FROM refs WHERE id = ?").get(id);
 
     return NextResponse.json(created, { status: 201 });

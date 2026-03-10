@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
     const db = getDb();
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
-    const meetingDate = date || now.split("T")[0];
+    const meetingDate = date || now;
 
     // Normalize tags: strip leading "#" from each tag so display can add it consistently
     const normalizedTags = tags

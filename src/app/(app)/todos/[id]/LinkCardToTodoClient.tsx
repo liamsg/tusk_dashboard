@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { showToast } from "@/components/Toast";
 
 interface LinkedCard {
   id: string;
@@ -39,6 +40,7 @@ export function LinkCardToTodoClient({
 
       if (!res.ok) throw new Error("Failed to link card");
 
+      showToast("Linked to card");
       setOpen(false);
       setSelectedCardId(allCards[0]?.id ?? "");
       router.refresh();

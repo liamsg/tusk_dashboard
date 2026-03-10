@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { showToast } from "@/components/Toast";
 
 interface ArchiveOrgButtonProps {
   orgId: string;
@@ -24,6 +25,7 @@ export function ArchiveOrgButton({ orgId }: ArchiveOrgButtonProps) {
 
       if (!res.ok) throw new Error("Failed to archive");
 
+      showToast("Organisation archived");
       router.push("/people");
       router.refresh();
     } catch {

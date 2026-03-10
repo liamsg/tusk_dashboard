@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { showToast } from "@/components/Toast";
 
 interface ArchiveRefButtonProps {
   refId: string;
@@ -24,6 +25,7 @@ export function ArchiveRefButton({ refId }: ArchiveRefButtonProps) {
 
       if (!res.ok) throw new Error("Failed to archive");
 
+      showToast("Reference archived");
       router.push("/browse");
       router.refresh();
     } catch {

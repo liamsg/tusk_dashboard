@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { showToast } from "@/components/Toast";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -84,6 +85,7 @@ export function MilestonesSection({ milestones: initialMilestones }: MilestonesS
       setMilestones((prev) =>
         prev.map((ms) => (ms.id === id ? { ...ms, ...updated } : ms))
       );
+      showToast("Milestone updated");
       router.refresh();
     } catch {
       // revert silently
@@ -112,6 +114,7 @@ export function MilestonesSection({ milestones: initialMilestones }: MilestonesS
         if (!b.target_date) return -1;
         return a.target_date.localeCompare(b.target_date);
       }));
+      showToast("Milestone added");
       setNewTitle("");
       setNewDate("");
       setAdding(false);

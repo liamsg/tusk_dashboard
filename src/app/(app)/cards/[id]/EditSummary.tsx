@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { showToast } from "@/components/Toast";
 
 interface EditSummaryProps {
   cardId: string;
@@ -31,6 +32,7 @@ export function EditSummary({ cardId, initialSummary }: EditSummaryProps) {
         body: JSON.stringify({ summary: text.trim() || null }),
       });
       if (!res.ok) throw new Error("Failed to update summary");
+      showToast("Card updated");
       setEditing(false);
       router.refresh();
     } catch {

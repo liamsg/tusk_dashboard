@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { showToast } from "@/components/Toast";
 
 interface Organisation {
   id: string;
@@ -60,6 +61,7 @@ export function CreatePersonForm({ organisations }: CreatePersonFormProps) {
 
       if (!res.ok) throw new Error("Failed to create person");
 
+      showToast("Person added");
       resetForm();
       router.refresh();
     } catch {

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { showToast } from "@/components/Toast";
 
 interface MeetingNote {
   id: string;
@@ -47,6 +48,7 @@ export function LinkMeetingNoteInline({
         body: JSON.stringify({ link_meeting_note_id: noteId }),
       });
       if (!res.ok) throw new Error("Failed to link meeting note");
+      showToast("Linked meeting note");
       setOpen(false);
       router.refresh();
     } catch {

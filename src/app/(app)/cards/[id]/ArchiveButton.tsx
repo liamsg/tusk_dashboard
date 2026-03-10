@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { showToast } from "@/components/Toast";
 
 interface ArchiveButtonProps {
   cardId: string;
@@ -24,6 +25,7 @@ export function ArchiveButton({ cardId }: ArchiveButtonProps) {
 
       if (!res.ok) throw new Error("Failed to archive");
 
+      showToast("Card archived");
       router.push("/browse");
       router.refresh();
     } catch {

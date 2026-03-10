@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { showToast } from "@/components/Toast";
 
 interface ArchivePersonButtonProps {
   personId: string;
@@ -24,6 +25,7 @@ export function ArchivePersonButton({ personId }: ArchivePersonButtonProps) {
 
       if (!res.ok) throw new Error("Failed to archive");
 
+      showToast("Person archived");
       router.push("/people");
       router.refresh();
     } catch {

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { showToast } from "@/components/Toast";
 
 interface EditNoteContentProps {
   meetingNoteId: string;
@@ -24,6 +25,7 @@ export function EditNoteContent({ meetingNoteId, content }: EditNoteContentProps
         body: JSON.stringify({ content: value }),
       });
       if (!res.ok) throw new Error("Failed to save");
+      showToast("Meeting note updated");
       setEditing(false);
       router.refresh();
     } catch {

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { showToast } from "@/components/Toast";
 
 interface AddPersonToTodoClientProps {
   todoId: string;
@@ -37,6 +38,7 @@ export function AddPersonToTodoClient({
 
       if (!res.ok) throw new Error("Failed to link person");
 
+      showToast("Linked person");
       setOpen(false);
       setSelectedPersonId(allPeople[0]?.id ?? "");
       router.refresh();

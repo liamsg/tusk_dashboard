@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { showToast } from "@/components/Toast";
 
 interface AddPersonInlineProps {
   cardId: string;
@@ -56,6 +57,7 @@ export function AddPersonInline({ cardId }: AddPersonInlineProps) {
         body: JSON.stringify({ link_person_id: person.id }),
       });
 
+      showToast("Person added");
       resetForm();
       router.refresh();
     } catch {

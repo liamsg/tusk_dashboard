@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { showToast } from "@/components/Toast";
 
 interface MeetingNoteActionsProps {
   meetingNoteId: string;
@@ -25,6 +26,7 @@ export function MeetingNoteActions({ meetingNoteId }: MeetingNoteActionsProps) {
 
       if (!res.ok) throw new Error("Failed to archive");
 
+      showToast("Meeting note archived");
       router.push("/meeting-notes");
       router.refresh();
     } catch {

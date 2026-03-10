@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { showToast } from "@/components/Toast";
 
 interface FlagButtonProps {
   cardId: string;
@@ -23,6 +24,7 @@ export function FlagButton({ cardId, flagged }: FlagButtonProps) {
 
       if (!res.ok) throw new Error("Failed to update flag");
 
+      showToast(flagged ? "Unflagged" : "Flagged for discussion");
       router.refresh();
     } catch {
       // silently fail
