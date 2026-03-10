@@ -1,7 +1,16 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Link from "next/link";
 import { RestoreButton } from "./RestoreButton";
+
+const ENTITY_LINKS: Record<string, (id: string) => string> = {
+  card: (id) => `/cards/${id}`,
+  todo: (id) => `/todos/${id}`,
+  person: (id) => `/people/${id}`,
+  organisation: (id) => `/people/org/${id}`,
+  meeting_note: (id) => `/meeting-notes/${id}`,
+};
 
 interface ArchivedItem {
   id: string;
@@ -85,7 +94,16 @@ export function ArchiveFilter({ items }: ArchiveFilterProps) {
             >
               <div className="min-w-0 flex-1">
                 <p className="text-sm text-navy">
-                  {item.name}{" "}
+                  {ENTITY_LINKS[item.entityType] ? (
+                    <Link
+                      href={ENTITY_LINKS[item.entityType](item.id)}
+                      className="hover:underline hover:text-navy-light transition-colors"
+                    >
+                      {item.name}
+                    </Link>
+                  ) : (
+                    item.name
+                  )}{" "}
                   <span className="text-stone-400">({item.entityLabel})</span>
                 </p>
                 <p className="text-xs text-stone-400 mt-0.5">

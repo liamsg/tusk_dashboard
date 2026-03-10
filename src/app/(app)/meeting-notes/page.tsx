@@ -125,7 +125,7 @@ export default async function MeetingNotesPage() {
     <div className="mx-auto max-w-2xl px-4">
       {/* Header */}
       <header className="pt-6 pb-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between">
           <h1 className="font-heading text-xl text-navy">Meeting Notes</h1>
           <CreateMeetingNoteForm people={people} />
         </div>

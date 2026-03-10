@@ -17,6 +17,7 @@ export function CreateMeetingNoteForm({ people }: CreateMeetingNoteFormProps) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [date, setDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [time, setTime] = useState("");
   const [content, setContent] = useState("");
   const [tags, setTags] = useState("");
   const [selectedAttendees, setSelectedAttendees] = useState<Set<string>>(
@@ -34,6 +35,7 @@ export function CreateMeetingNoteForm({ people }: CreateMeetingNoteFormProps) {
   const resetForm = () => {
     setTitle("");
     setDate(new Date().toISOString().split("T")[0]);
+    setTime("");
     setContent("");
     setTags("");
     setSelectedAttendees(new Set());
@@ -59,12 +61,18 @@ export function CreateMeetingNoteForm({ people }: CreateMeetingNoteFormProps) {
 
     setSubmitting(true);
     try {
+      // Combine date and time into ISO datetime if both provided
+      let dateValue = date || undefined;
+      if (date && time) {
+        dateValue = `${date}T${time}:00`;
+      }
+
       const res = await fetch("/api/meeting-notes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: trimmedTitle,
-          date: date || undefined,
+          date: dateValue,
           content: trimmedContent,
           tags: tags.trim() || undefined,
           attendee_ids: Array.from(selectedAttendees),
@@ -119,13 +127,23 @@ export function CreateMeetingNoteForm({ people }: CreateMeetingNoteFormProps) {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         <div>
           <label className="block text-xs text-stone-400 mb-1">Date</label>
           <input
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
+            className="w-full rounded border border-stone-200 bg-white px-2 py-1.5 text-sm text-navy focus:outline-none focus:ring-1 focus:ring-navy/20"
+          />
+        </div>
+
+        <div>
+          <label className="block text-xs text-stone-400 mb-1">Time</label>
+          <input
+            type="time"
+            value={time}
+            onChange={(e) => setTime(e.target.value)}
             className="w-full rounded border border-stone-200 bg-white px-2 py-1.5 text-sm text-navy focus:outline-none focus:ring-1 focus:ring-navy/20"
           />
         </div>

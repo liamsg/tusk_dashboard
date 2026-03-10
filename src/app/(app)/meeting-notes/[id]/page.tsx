@@ -7,6 +7,9 @@ import { AddNoteForm } from "@/components/AddNoteForm";
 import { AddReferenceForm } from "@/components/AddReferenceForm";
 import { MeetingNoteActions } from "./MeetingNoteActions";
 import { LinkItemToNote } from "./LinkItemToNote";
+import { EditNoteContent } from "./EditNoteContent";
+import { EditNoteTitle } from "./EditNoteTitle";
+import { CreateTodoFromNote } from "./CreateTodoFromNote";
 
 // -- Types --------------------------------------------------------------------
 
@@ -66,6 +69,11 @@ interface ActivityRow {
   created_at: string;
 }
 
+interface UserOption {
+  id: string;
+  name: string;
+}
+
 interface CardOption {
   id: string;
   title: string;
@@ -94,11 +102,20 @@ function formatLongDate(iso: string): string {
 
 function formatDatetime(iso: string): string {
   const d = new Date(iso.includes("T") ? iso : iso + "T00:00:00");
-  return d.toLocaleDateString("en-GB", {
+  const datePart = d.toLocaleDateString("en-GB", {
     day: "numeric",
     month: "short",
     year: "numeric",
   });
+  if (iso.includes("T")) {
+    const timePart = d.toLocaleTimeString("en-GB", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+    return `${datePart}, ${timePart}`;
+  }
+  return datePart;
 }
 
 const REF_ICONS: Record<string, string> = {
@@ -227,6 +244,11 @@ export default async function MeetingNoteDetailPage({ params }: PageProps) {
     )
     .all() as PersonOption[];
 
+  // All users for the create-todo form
+  const allUsers = db
+    .prepare("SELECT id, name FROM users ORDER BY name ASC")
+    .all() as UserOption[];
+
   return (
     <div className="mx-auto max-w-2xl px-4">
       {/* Header */}
@@ -239,9 +261,7 @@ export default async function MeetingNoteDetailPage({ params }: PageProps) {
             >
               &larr; {meetingNote.title}
             </Link>
-            <h1 className="mt-1 font-heading text-xl text-navy">
-              {meetingNote.title}
-            </h1>
+            <EditNoteTitle meetingNoteId={meetingNote.id} title={meetingNote.title} />
           </div>
           <MeetingNoteActions meetingNoteId={meetingNote.id} />
         </div>
@@ -297,13 +317,7 @@ export default async function MeetingNoteDetailPage({ params }: PageProps) {
 
       {/* Content */}
       <section className="border-t border-stone-200 py-4">
-        {meetingNote.content ? (
-          <p className="text-base text-navy whitespace-pre-wrap leading-relaxed">
-            {meetingNote.content}
-          </p>
-        ) : (
-          <p className="text-sm text-stone-400">No content recorded.</p>
-        )}
+        <EditNoteContent meetingNoteId={meetingNote.id} content={meetingNote.content} />
       </section>
 
       {/* Linked Items */}
@@ -312,11 +326,14 @@ export default async function MeetingNoteDetailPage({ params }: PageProps) {
           <h2 className="text-xs font-sans font-semibold uppercase tracking-widest text-stone-400">
             Linked Items
           </h2>
-          <LinkItemToNote
-            meetingNoteId={meetingNote.id}
-            availableCards={availableCards}
-            availablePeople={availablePeople}
-          />
+          <div className="flex items-center gap-3">
+            <CreateTodoFromNote meetingNoteId={meetingNote.id} users={allUsers} />
+            <LinkItemToNote
+              meetingNoteId={meetingNote.id}
+              availableCards={availableCards}
+              availablePeople={availablePeople}
+            />
+          </div>
         </div>
         {linkedCards.length === 0 &&
         linkedTodos.length === 0 &&

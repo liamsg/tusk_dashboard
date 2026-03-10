@@ -112,12 +112,6 @@ const REF_ICONS: Record<string, string> = {
   other: "\uD83D\uDCCE",
 };
 
-const BIC_CONFIG: Record<string, { label: string; colorClass: string }> = {
-  us: { label: "Us", colorClass: "bg-blue-500" },
-  external: { label: "External", colorClass: "bg-amber-500" },
-  on_hold: { label: "On Hold", colorClass: "bg-stone-400" },
-};
-
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 type PageProps = {
@@ -140,26 +134,6 @@ export default async function TodoDetailPage({ params }: PageProps) {
   if (!todo) {
     notFound();
   }
-
-  // Assigned user
-  const assignee = todo.assigned_to
-    ? (db
-        .prepare("SELECT id, name FROM users WHERE id = ?")
-        .get(todo.assigned_to) as { id: string; name: string } | undefined)
-    : undefined;
-
-  // Ball-in-court person
-  const bicPerson = todo.ball_in_court_person_id
-    ? (db
-        .prepare(
-          `SELECT p.id, p.name, p.role, p.email, p.phone, p.relationship,
-                  o.name AS organisation_name
-           FROM people p
-           LEFT JOIN organisations o ON o.id = p.organisation_id
-           WHERE p.id = ?`
-        )
-        .get(todo.ball_in_court_person_id) as PersonRow | undefined)
-    : undefined;
 
   // Linked people
   const people = db
@@ -256,8 +230,6 @@ export default async function TodoDetailPage({ params }: PageProps) {
     ? formatRelativeDate(todo.due_date)
     : null;
 
-  const bicConfig = BIC_CONFIG[todo.ball_in_court || "us"] ?? BIC_CONFIG.us;
-
   return (
     <div className="mx-auto max-w-2xl px-4">
       {/* Header */}
@@ -280,45 +252,21 @@ export default async function TodoDetailPage({ params }: PageProps) {
           />
         </div>
 
-        {/* Meta line */}
-        <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-stone-500">
-          {assignee && (
-            <span>
-              Assigned to: <span className="text-navy">{assignee.name}</span>
+        {/* Due date */}
+        {dateInfo && (
+          <div className="mt-2 text-sm text-stone-500">
+            Due:{" "}
+            <span
+              className={
+                dateInfo.overdue
+                  ? "text-red-500 font-medium"
+                  : "text-navy"
+              }
+            >
+              {dateInfo.label}
             </span>
-          )}
-          {dateInfo && (
-            <span>
-              Due:{" "}
-              <span
-                className={
-                  dateInfo.overdue
-                    ? "text-red-500 font-medium"
-                    : "text-navy"
-                }
-              >
-                {dateInfo.label}
-              </span>
-            </span>
-          )}
-        </div>
-
-        {/* Ball in court */}
-        <div className="mt-1.5 flex items-center gap-1.5 text-sm text-stone-500">
-          Ball in court:{" "}
-          <span
-            className={`inline-block h-2 w-2 rounded-full ${bicConfig.colorClass}`}
-          />
-          <span className="text-navy">{bicConfig.label}</span>
-          {todo.ball_in_court === "external" && bicPerson && (
-            <span className="text-stone-400">
-              ({bicPerson.name}
-              {bicPerson.organisation_name &&
-                ` @ ${bicPerson.organisation_name}`}
-              )
-            </span>
-          )}
-        </div>
+          </div>
+        )}
 
         {/* Description */}
         {todo.description && (

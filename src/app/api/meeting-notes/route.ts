@@ -68,6 +68,15 @@ export async function POST(request: NextRequest) {
     const now = new Date().toISOString();
     const meetingDate = date || now.split("T")[0];
 
+    // Normalize tags: strip leading "#" from each tag so display can add it consistently
+    const normalizedTags = tags
+      ? tags
+          .split(",")
+          .map((t: string) => t.trim().replace(/^#+/, ""))
+          .filter(Boolean)
+          .join(", ")
+      : null;
+
     db.prepare(
       `INSERT INTO meeting_notes (id, title, date, content, recorded_by, tags, created_by, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
@@ -77,7 +86,7 @@ export async function POST(request: NextRequest) {
       meetingDate,
       content,
       session.userId,
-      tags || null,
+      normalizedTags,
       session.userId,
       now
     );

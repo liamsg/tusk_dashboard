@@ -158,15 +158,18 @@ export default async function TodosPage() {
   return (
     <div className="mx-auto max-w-3xl px-4">
       {/* Header */}
-      <header className="pt-6 pb-4 flex items-center justify-between">
-        <h1 className="font-heading text-xl text-navy">To-Dos</h1>
-        <CreateTodoForm users={users} />
+      <header className="pt-6 pb-4">
+        <div className="flex flex-wrap items-center justify-between">
+          <h1 className="font-heading text-xl text-navy">To-Dos</h1>
+          <CreateTodoForm users={users} currentUserId={session.userId} />
+        </div>
       </header>
 
       <TodoList
         groups={groups}
         doneTodos={doneTodos}
         hasOpenTodos={openTodos.length > 0}
+        currentUserId={session.userId}
       />
 
       <div className="h-8" />

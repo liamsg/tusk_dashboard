@@ -1,22 +1,34 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 interface CreateTodoFormProps {
   users: { id: string; name: string }[];
+  currentUserId?: string;
 }
 
-export function CreateTodoForm({ users }: CreateTodoFormProps) {
+export function CreateTodoForm({ users, currentUserId }: CreateTodoFormProps) {
   const [open, setOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [assignedTo, setAssignedTo] = useState(users[0]?.id ?? "");
+  const [assignedTo, setAssignedTo] = useState(currentUserId ?? users[0]?.id ?? "");
   const [dueDate, setDueDate] = useState("");
   const [ballInCourt, setBallInCourt] = useState("us");
+  const [cardId, setCardId] = useState("");
+  const [cards, setCards] = useState<{ id: string; title: string }[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+
+  // Fetch available cards when form opens
+  useEffect(() => {
+    if (!open) return;
+    fetch("/api/cards")
+      .then((res) => (res.ok ? res.json() : []))
+      .then((data) => setCards(Array.isArray(data) ? data : []))
+      .catch(() => setCards([]));
+  }, [open]);
 
   const handleOpen = () => {
     setOpen(true);
@@ -26,9 +38,10 @@ export function CreateTodoForm({ users }: CreateTodoFormProps) {
   const resetForm = () => {
     setTitle("");
     setDescription("");
-    setAssignedTo(users[0]?.id ?? "");
+    setAssignedTo(currentUserId ?? users[0]?.id ?? "");
     setDueDate("");
     setBallInCourt("us");
+    setCardId("");
     setOpen(false);
   };
 
@@ -47,6 +60,7 @@ export function CreateTodoForm({ users }: CreateTodoFormProps) {
           assigned_to: assignedTo,
           due_date: dueDate || undefined,
           ball_in_court: ballInCourt,
+          card_id: cardId || undefined,
         }),
       });
 
@@ -155,6 +169,26 @@ export function CreateTodoForm({ users }: CreateTodoFormProps) {
           </select>
         </div>
       </div>
+
+      {cards.length > 0 && (
+        <div>
+          <label className="block text-xs text-stone-400 mb-1">
+            Link to card
+          </label>
+          <select
+            value={cardId}
+            onChange={(e) => setCardId(e.target.value)}
+            className="w-full rounded border border-stone-200 bg-white px-2 py-1.5 text-sm text-navy focus:outline-none focus:ring-1 focus:ring-navy/20"
+          >
+            <option value="">None</option>
+            {cards.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.title}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       <div className="flex items-center gap-2 pt-1">
         <button

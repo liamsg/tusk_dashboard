@@ -142,7 +142,17 @@ export async function PATCH(
     for (const field of updatableFields) {
       if (body[field] !== undefined) {
         setClauses.push(`${field} = ?`);
-        setParams.push(body[field]);
+        // Normalize tags: strip leading "#" from each tag
+        if (field === "tags" && typeof body[field] === "string") {
+          const normalized = body[field]
+            .split(",")
+            .map((t: string) => t.trim().replace(/^#+/, ""))
+            .filter(Boolean)
+            .join(", ");
+          setParams.push(normalized);
+        } else {
+          setParams.push(body[field]);
+        }
       }
     }
 

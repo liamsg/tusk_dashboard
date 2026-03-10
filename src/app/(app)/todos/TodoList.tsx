@@ -415,19 +415,37 @@ export default function TodoList({
   groups,
   doneTodos: initialDoneTodos,
   hasOpenTodos,
+  currentUserId,
 }: {
   groups: TodoGroup[];
   doneTodos: EnrichedTodo[];
   hasOpenTodos: boolean;
+  currentUserId?: string;
 }) {
+  const [viewMode, setViewMode] = useState<"my" | "all">("my");
   // Build a map of group key -> todos for local state
-  const initialGroupState: Record<string, EnrichedTodo[]> = {};
-  for (const g of groups) {
-    initialGroupState[g.key] = [...g.todos];
-  }
+  const buildGroupState = useCallback((gs: TodoGroup[]) => {
+    const state: Record<string, EnrichedTodo[]> = {};
+    for (const g of gs) {
+      state[g.key] = [...g.todos];
+    }
+    return state;
+  }, []);
 
-  const [groupState, setGroupState] = useState(initialGroupState);
-  const [doneTodos] = useState(initialDoneTodos);
+  const [groupState, setGroupState] = useState(() => buildGroupState(groups));
+  const [doneTodos, setDoneTodos] = useState(initialDoneTodos);
+
+  // Sync state when server data changes (e.g. after router.refresh())
+  const [prevGroups, setPrevGroups] = useState(groups);
+  const [prevDoneTodos, setPrevDoneTodos] = useState(initialDoneTodos);
+  if (groups !== prevGroups) {
+    setPrevGroups(groups);
+    setGroupState(buildGroupState(groups));
+  }
+  if (initialDoneTodos !== prevDoneTodos) {
+    setPrevDoneTodos(initialDoneTodos);
+    setDoneTodos(initialDoneTodos);
+  }
 
   const handleSwap = useCallback(
     (groupKey: string, index: number, direction: "up" | "down") => {
@@ -458,10 +476,54 @@ export default function TodoList({
     []
   );
 
+  // Filter groups based on view mode
+  const visibleGroups = viewMode === "all" || !currentUserId
+    ? groups
+    : groups.filter((group) => {
+        // In "My View", show groups where the user is the assignee, plus external and on_hold
+        if (group.key === "external" || group.key === "on_hold") return true;
+        // "us-{assigneeName}" groups: check if todos in this group are assigned to the current user
+        const todos = groupState[group.key];
+        if (!todos || todos.length === 0) return false;
+        return todos.some((t) => t.assigned_to === currentUserId);
+      });
+
+  const visibleDoneTodos = viewMode === "all" || !currentUserId
+    ? doneTodos
+    : doneTodos.filter((t) => t.assigned_to === currentUserId);
+
   return (
     <>
+      {/* My View / All toggle */}
+      {currentUserId && (
+        <div className="flex items-center gap-0 mb-4 rounded-md overflow-hidden border border-stone-200 w-fit">
+          <button
+            type="button"
+            onClick={() => setViewMode("my")}
+            className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+              viewMode === "my"
+                ? "bg-navy text-white"
+                : "bg-white text-stone-500 hover:text-navy"
+            }`}
+          >
+            My View
+          </button>
+          <button
+            type="button"
+            onClick={() => setViewMode("all")}
+            className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+              viewMode === "all"
+                ? "bg-navy text-white"
+                : "bg-white text-stone-500 hover:text-navy"
+            }`}
+          >
+            All
+          </button>
+        </div>
+      )}
+
       {/* Open groups */}
-      {groups.map((group) => {
+      {visibleGroups.map((group) => {
         const todos = groupState[group.key];
         if (!todos || todos.length === 0) return null;
         return (
@@ -475,21 +537,21 @@ export default function TodoList({
       })}
 
       {/* No open todos */}
-      {!hasOpenTodos && (
+      {visibleGroups.every((g) => !groupState[g.key] || groupState[g.key].length === 0) && !hasOpenTodos && (
         <p className="text-sm text-stone-400 py-8 text-center">
           No open to-dos. Click + New to create one.
         </p>
       )}
 
       {/* Done */}
-      {doneTodos.length > 0 && (
+      {visibleDoneTodos.length > 0 && (
         <details className="mb-6">
           <summary className="cursor-pointer text-xs font-sans font-semibold uppercase tracking-widest text-stone-400 mb-2 list-none flex items-center gap-1 select-none">
-            Done ({doneTodos.length})
+            Done ({visibleDoneTodos.length})
             <span className="text-stone-300 ml-1">&#9660;</span>
           </summary>
           <div className="bg-white rounded-lg border border-stone-200 divide-y divide-stone-100">
-            {doneTodos.map((todo) => (
+            {visibleDoneTodos.map((todo) => (
               <DoneTodoItem key={todo.id} todo={todo} />
             ))}
           </div>
