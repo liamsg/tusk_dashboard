@@ -67,13 +67,20 @@ export function EditNoteContent({ meetingNoteId, content }: EditNoteContentProps
 
   return (
     <div className="relative group">
-      <button
-        type="button"
-        onClick={() => setEditing(true)}
-        className="absolute top-0 right-0 text-xs text-stone-400 hover:text-navy transition-colors opacity-0 group-hover:opacity-100"
-      >
-        Edit
-      </button>
+      <div className="flex items-center gap-2 mb-2">
+        <h2 className="text-xs font-sans font-semibold uppercase tracking-widest text-stone-400">
+          Content
+        </h2>
+        <button
+          type="button"
+          onClick={() => setEditing(true)}
+          className="text-stone-300 hover:text-navy transition-colors"
+          aria-label="Edit content"
+          title="Edit content"
+        >
+          <span className="text-sm">&#9998;</span>
+        </button>
+      </div>
       {content ? (
         <p className="text-base text-navy whitespace-pre-wrap leading-relaxed">
           {content}

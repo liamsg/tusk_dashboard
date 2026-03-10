@@ -228,7 +228,7 @@ export default async function MeetingNoteDetailPage({ params }: PageProps) {
 
   // Parse tags
   const tagList = meetingNote.tags
-    ? meetingNote.tags.split(",").map((t) => t.trim()).filter(Boolean)
+    ? meetingNote.tags.split(/[,\s]+/).map((t: string) => t.trim().replace(/^#+/, "")).filter(Boolean)
     : [];
 
   // Available cards and people for linking
@@ -270,35 +270,37 @@ export default async function MeetingNoteDetailPage({ params }: PageProps) {
         <p className="mt-1 text-sm text-stone-500">
           {formatDatetime(meetingNote.date)}
         </p>
-        {recorderName && (
-          <p className="text-sm text-stone-500">
-            Recorded by: {recorderName}
-          </p>
-        )}
-
-        {/* Attendees */}
-        {attendees.length > 0 && (
-          <p className="mt-1 text-sm text-stone-500">
-            Attendees:{" "}
-            {attendees.map((a, i) => (
-              <span key={a.id}>
-                {i > 0 && ", "}
-                <Link
-                  href={`/people/${a.id}`}
-                  className="hover:text-navy hover:underline transition-colors"
-                >
-                  {a.name}
-                  {a.organisation_name && (
-                    <span className="text-stone-400">
-                      {" "}
-                      ({a.organisation_name})
-                    </span>
-                  )}
-                </Link>
-              </span>
-            ))}
-          </p>
-        )}
+        {/* Attendees — recorder shown first as an internal attendee */}
+        <p className="mt-1 text-sm text-stone-500">
+          Attendees:{" "}
+          {recorderName && (
+            <span>
+              {recorderName}
+              <span className="text-stone-400"> (recorder)</span>
+              {attendees.length > 0 && ", "}
+            </span>
+          )}
+          {attendees.map((a, i) => (
+            <span key={a.id}>
+              {i > 0 && ", "}
+              <Link
+                href={`/people/${a.id}`}
+                className="hover:text-navy hover:underline transition-colors"
+              >
+                {a.name}
+                {a.organisation_name && (
+                  <span className="text-stone-400">
+                    {" "}
+                    ({a.organisation_name})
+                  </span>
+                )}
+              </Link>
+            </span>
+          ))}
+          {!recorderName && attendees.length === 0 && (
+            <span className="text-stone-400 italic">None recorded</span>
+          )}
+        </p>
 
         {/* Tags */}
         {tagList.length > 0 && (

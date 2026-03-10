@@ -34,8 +34,8 @@ export function FlagButton({ cardId, flagged }: FlagButtonProps) {
   if (flagged) {
     return (
       <div className="flex items-center gap-2">
-        <span className="text-xs text-amber-600 font-medium">
-          Flagged for discussion &#10071;
+        <span className="inline-flex items-center gap-1 rounded bg-amber-50 border border-amber-200 px-2.5 py-1 text-xs text-amber-700 font-medium">
+          <span>&#9888;</span> Flagged for discussion
         </span>
         <button
           type="button"

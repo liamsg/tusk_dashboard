@@ -49,7 +49,7 @@ export interface TodoGroup {
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-function formatRelativeDate(iso: string): { label: string; overdue: boolean } {
+function formatRelativeDate(iso: string): { label: string; overdue: boolean; isToday: boolean } {
   const d = new Date(iso + "T00:00:00");
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -59,23 +59,28 @@ function formatRelativeDate(iso: string): { label: string; overdue: boolean } {
   );
 
   if (diffDays < 0) {
-    if (diffDays === -1) return { label: "yesterday", overdue: true };
+    const absDays = Math.abs(diffDays);
+    const dateStr = d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+    if (diffDays === -1) return { label: `yesterday — overdue`, overdue: true, isToday: false };
     return {
-      label: d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
+      label: `${dateStr} — ${absDays}d overdue`,
       overdue: true,
+      isToday: false,
     };
   }
-  if (diffDays === 0) return { label: "today", overdue: false };
-  if (diffDays === 1) return { label: "tomorrow", overdue: false };
+  if (diffDays === 0) return { label: "today", overdue: false, isToday: true };
+  if (diffDays === 1) return { label: "tomorrow", overdue: false, isToday: false };
   if (diffDays <= 6) {
     return {
       label: d.toLocaleDateString("en-GB", { weekday: "short" }),
       overdue: false,
+      isToday: false,
     };
   }
   return {
     label: d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }),
     overdue: false,
+    isToday: false,
   };
 }
 
@@ -130,14 +135,14 @@ function TodoItem({
     .join(", ");
 
   return (
-    <div className="px-4 py-3 flex items-start gap-3">
-      {/* Reorder buttons */}
-      <span className="flex flex-col items-center mt-0.5 flex-shrink-0 leading-none text-sm select-none">
+    <div className="group px-4 py-3 flex items-start gap-3">
+      {/* Reorder buttons — subtle, visible on row hover */}
+      <span className="flex flex-col items-center mt-0.5 flex-shrink-0 leading-none text-sm select-none opacity-0 group-hover:opacity-100 transition-opacity">
         {!isFirst ? (
           <button
             type="button"
             onClick={onMoveUp}
-            className="text-stone-400 hover:text-stone-600 leading-none"
+            className="text-stone-300 hover:text-stone-600 leading-none"
             aria-label="Move up"
           >
             &#9650;
@@ -149,7 +154,7 @@ function TodoItem({
           <button
             type="button"
             onClick={onMoveDown}
-            className="text-stone-400 hover:text-stone-600 leading-none"
+            className="text-stone-300 hover:text-stone-600 leading-none"
             aria-label="Move down"
           >
             &#9660;
@@ -179,15 +184,21 @@ function TodoItem({
           >
             {todo.title}
           </Link>
-          {dateInfo && (
+          {dateInfo ? (
             <span
               className={`text-xs whitespace-nowrap flex-shrink-0 ${
                 dateInfo.overdue
                   ? "text-red-500 font-medium"
+                  : dateInfo.isToday
+                  ? "text-amber-600"
                   : "text-stone-400"
               }`}
             >
               {dateInfo.label}
+            </span>
+          ) : (
+            <span className="text-stone-300 italic text-xs whitespace-nowrap flex-shrink-0">
+              No due date
             </span>
           )}
         </div>
@@ -298,15 +309,21 @@ function DoneTodoItem({ todo }: { todo: EnrichedTodo }) {
           >
             {todo.title}
           </Link>
-          {dateInfo && (
+          {dateInfo ? (
             <span
               className={`text-xs whitespace-nowrap flex-shrink-0 ${
                 dateInfo.overdue
                   ? "text-red-500 font-medium"
+                  : dateInfo.isToday
+                  ? "text-amber-600"
                   : "text-stone-400"
               }`}
             >
               {dateInfo.label}
+            </span>
+          ) : (
+            <span className="text-stone-300 italic text-xs whitespace-nowrap flex-shrink-0">
+              No due date
             </span>
           )}
         </div>

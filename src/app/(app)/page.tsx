@@ -25,14 +25,16 @@ function daysFromNow(iso: string): number {
 
 function relativeDay(iso: string): string {
   const diff = daysFromNow(iso);
-  if (diff === 0) return "Today";
-  if (diff === 1) return "Tomorrow";
-  if (diff === -1) return "Yesterday";
+  if (diff === 0) return "today";
+  if (diff === 1) return "tomorrow";
+  if (diff === -1) return "yesterday";
   if (diff > 1 && diff <= 6) {
     const d = new Date(iso + (iso.includes("T") ? "" : "T00:00:00"));
     return d.toLocaleDateString("en-GB", { weekday: "long" });
   }
-  return formatDate(iso);
+  // Short date for anything beyond this week
+  const d = new Date(iso + (iso.includes("T") ? "" : "T00:00:00"));
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 }
 
 function timeAgo(iso: string): string {
@@ -145,8 +147,11 @@ export default async function DashboardPage() {
     )
     .all(today) as OverdueTodo[];
 
-  // This week's todos with card names
-  const weekTodos = db
+  // Collect overdue todo IDs so we can exclude them from the "this week" section
+  const overdueIds = new Set(overdueTodos.map((t) => t.id));
+
+  // This week's todos with card names (only today onward — not overdue)
+  const weekTodosRaw = db
     .prepare(
       `SELECT t.id, t.title, t.due_date, t.assigned_to, u.name as assignee_name,
               t.ball_in_court, t.ball_in_court_person_id, p.name as bic_person_name,
@@ -162,6 +167,9 @@ export default async function DashboardPage() {
        ORDER BY t.due_date`
     )
     .all(today, weekEnd) as WeekTodo[];
+
+  // Filter out any that are also in the overdue list (belt-and-suspenders)
+  const weekTodos = weekTodosRaw.filter((t) => !overdueIds.has(t.id));
 
   // All users (for grouping)
   const allUsers = db

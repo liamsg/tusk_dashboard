@@ -83,7 +83,7 @@ export default async function MeetingNotesPage() {
 
     // Parse tags
     const tagList = note.tags
-      ? note.tags.split(",").map((t) => t.trim()).filter(Boolean)
+      ? note.tags.split(/[,\s]+/).map((t: string) => t.trim().replace(/^#+/, "")).filter(Boolean)
       : [];
 
     // Preview: first ~100 chars of content
