@@ -12,13 +12,13 @@ interface SeedWorkstream {
   sortOrder: number;
 }
 
-const SEED_PASSWORD = "tusk2026";
+const SEED_PASSWORD = "TeamTusk2026!";
 const BCRYPT_ROUNDS = 10;
 
 const SEED_USERS: SeedUser[] = [
-  { name: "Sarah", email: "sarah@tusk.com" },
-  { name: "Mike", email: "mike@tusk.com" },
-  { name: "James", email: "james@tusk.com" },
+  { name: "Liam", email: "liam@goddard.co.uk" },
+  { name: "Serge", email: "serget31@hotmail.com" },
+  { name: "Kapil", email: "kwglobal@pm.me" },
 ];
 
 const SEED_WORKSTREAMS: SeedWorkstream[] = [

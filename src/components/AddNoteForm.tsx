@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { showToast } from "@/components/Toast";
 
 interface AddNoteFormProps {
   entityType: string;
@@ -40,6 +41,7 @@ export function AddNoteForm({ entityType, entityId }: AddNoteFormProps) {
 
       setContent("");
       setOpen(false);
+      showToast("Note added");
       router.refresh();
     } catch {
       // keep form open

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
+import { showToast } from "@/components/Toast";
 
 interface InlineAddFormProps {
   label: string;
@@ -32,6 +33,7 @@ export function InlineAddForm({
       await onSubmit(trimmed);
       setValue("");
       setOpen(false);
+      showToast("Created successfully");
     } catch {
       // stay open so user can retry
     } finally {
@@ -72,7 +74,7 @@ export function InlineAddForm({
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         disabled={submitting}
-        className="rounded border border-stone-200 bg-white px-2 py-1 text-sm text-navy placeholder:text-stone-300 focus:outline-none focus:ring-1 focus:ring-navy/20"
+        className="w-full md:w-64 rounded border border-stone-200 bg-white px-2 py-1 text-sm text-navy placeholder:text-stone-300 focus:outline-none focus:ring-1 focus:ring-navy/20"
       />
       <button
         type="button"

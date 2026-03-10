@@ -201,13 +201,19 @@ export default async function WorkstreamPage({ params, searchParams }: PageProps
                 {cat.subcategories.length === 0 &&
                   cat.directCards.length === 0 && (
                     <p className="text-xs text-stone-400">
-                      No subcategories or cards yet.
+                      No cards yet — use + Card above to add your first entry.
                     </p>
                   )}
               </CollapsibleSection>
             </div>
           );
         })}
+
+        {categoriesWithData.length === 0 && (
+          <p className="py-4 text-sm text-stone-400">
+            No categories yet. Create one to start organising this workstream.
+          </p>
+        )}
 
         {/* Add new category at the bottom */}
         <div className="border-t border-stone-200 pt-4">

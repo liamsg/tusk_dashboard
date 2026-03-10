@@ -10,6 +10,8 @@ import { ArchiveButton } from "./ArchiveButton";
 import { StatusDropdown } from "./StatusDropdown";
 import { AddPersonInline } from "./AddPersonInline";
 import { AddTodoInline } from "./AddTodoInline";
+import { EditSummary } from "./EditSummary";
+import { LinkMeetingNoteInline } from "./LinkMeetingNoteInline";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -272,15 +274,33 @@ export default async function CardDetailPage({ params }: PageProps) {
         </div>
 
         {/* Breadcrumb */}
-        {(category || subcategory) && (
-          <p className="mt-1 text-xs text-stone-400">
-            {category?.name}
+        {workstream && (
+          <p className="mt-1 text-sm text-stone-400">
+            <Link
+              href={`/browse/${workstream.id}`}
+              className="hover:text-navy transition-colors"
+            >
+              {workstream.name}
+            </Link>
+            {category && (
+              <>
+                {" > "}
+                <Link
+                  href={`/browse/${workstream.id}?category=${category.id}`}
+                  className="hover:text-navy transition-colors"
+                >
+                  {category.name}
+                </Link>
+              </>
+            )}
             {subcategory && (
               <>
                 {" > "}
-                {subcategory.name}
+                <span>{subcategory.name}</span>
               </>
             )}
+            {" > "}
+            <span className="text-stone-500">{card.title}</span>
           </p>
         )}
 
@@ -292,14 +312,12 @@ export default async function CardDetailPage({ params }: PageProps) {
       </header>
 
       {/* Summary */}
-      {card.summary && (
-        <section className="border-t border-stone-200 py-4">
-          <h2 className="text-xs font-sans font-semibold uppercase tracking-widest text-stone-400 mb-2">
-            Summary
-          </h2>
-          <p className="text-sm text-navy leading-relaxed">{card.summary}</p>
-        </section>
-      )}
+      <section className="border-t border-stone-200 py-4">
+        <h2 className="text-xs font-sans font-semibold uppercase tracking-widest text-stone-400 mb-2">
+          Summary
+        </h2>
+        <EditSummary cardId={card.id} initialSummary={card.summary} />
+      </section>
 
       {/* Key People */}
       <section className="border-t border-stone-200 py-4">
@@ -418,24 +436,37 @@ export default async function CardDetailPage({ params }: PageProps) {
       </section>
 
       {/* Meeting Notes */}
-      {meetingNotes.length > 0 && (
-        <section className="border-t border-stone-200 py-4">
-          <h2 className="text-xs font-sans font-semibold uppercase tracking-widest text-stone-400 mb-3">
+      <section className="border-t border-stone-200 py-4">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-xs font-sans font-semibold uppercase tracking-widest text-stone-400">
             Meeting Notes
           </h2>
+          <LinkMeetingNoteInline
+            cardId={card.id}
+            linkedIds={meetingNotes.map((mn) => mn.id)}
+          />
+        </div>
+        {meetingNotes.length === 0 ? (
+          <p className="text-sm text-stone-400">No meeting notes linked yet.</p>
+        ) : (
           <ul className="space-y-2">
             {meetingNotes.map((mn) => (
               <li key={mn.id} className="text-sm flex items-baseline gap-2">
                 <span>{"\uD83D\uDCDD"}</span>
-                <span className="text-navy">{mn.title}</span>
+                <Link
+                  href={`/meeting-notes/${mn.id}`}
+                  className="text-navy hover:underline"
+                >
+                  {mn.title}
+                </Link>
                 <span className="text-xs text-stone-400">
                   &mdash; {formatShortDate(mn.date)}
                 </span>
               </li>
             ))}
           </ul>
-        </section>
-      )}
+        )}
+      </section>
 
       {/* Notes */}
       <section className="border-t border-stone-200 py-4">

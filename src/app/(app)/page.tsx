@@ -100,6 +100,8 @@ interface ActivityRow {
   description: string | null;
   user_name: string | null;
   created_at: string;
+  entity_type: string | null;
+  entity_id: string | null;
 }
 
 interface WorkstreamRow {
@@ -178,7 +180,8 @@ export default async function DashboardPage() {
   // Activity log
   const activities = db
     .prepare(
-      `SELECT a.id, a.description, u.name as user_name, a.created_at
+      `SELECT a.id, a.description, u.name as user_name, a.created_at,
+              a.entity_type, a.entity_id
        FROM activity_log a
        LEFT JOIN users u ON a.user_id = u.id
        ORDER BY a.created_at DESC
@@ -274,7 +277,9 @@ export default async function DashboardPage() {
 
   // ── Group week todos by "ball in court" ───────────────────────────────────
 
-  const myTodos = weekTodos.filter((t) => t.assigned_to === session.userId);
+  const myTodos = weekTodos.filter(
+    (t) => t.assigned_to === session.userId && t.ball_in_court !== "external"
+  );
   const otherUserTodos: Record<string, WeekTodo[]> = {};
   const externalTodos = weekTodos.filter((t) => t.ball_in_court === "external");
 
@@ -285,6 +290,52 @@ export default async function DashboardPage() {
     );
     if (userTodos.length > 0) {
       otherUserTodos[user.name] = userTodos;
+    }
+  }
+
+  // Build lookup for category/subcategory -> workstream for activity links
+  const categoryWorkstreamMap: Record<string, string> = {};
+  const catWsRows = db
+    .prepare("SELECT id, workstream_id FROM categories")
+    .all() as { id: string; workstream_id: string }[];
+  for (const row of catWsRows) {
+    categoryWorkstreamMap[row.id] = row.workstream_id;
+  }
+
+  const subcatWsRows = db
+    .prepare(
+      `SELECT sc.id, c.workstream_id
+       FROM subcategories sc
+       JOIN categories c ON sc.category_id = c.id`
+    )
+    .all() as { id: string; workstream_id: string }[];
+  for (const row of subcatWsRows) {
+    categoryWorkstreamMap["sub_" + row.id] = row.workstream_id;
+  }
+
+  function activityHref(act: ActivityRow): string | null {
+    if (!act.entity_type || !act.entity_id) return null;
+    switch (act.entity_type) {
+      case "card":
+        return `/cards/${act.entity_id}`;
+      case "todo":
+        return `/todos/${act.entity_id}`;
+      case "person":
+        return `/people/${act.entity_id}`;
+      case "meeting_note":
+        return `/meeting-notes/${act.entity_id}`;
+      case "category": {
+        const wsId = categoryWorkstreamMap[act.entity_id];
+        return wsId ? `/browse/${wsId}` : "/browse";
+      }
+      case "subcategory": {
+        const wsId = categoryWorkstreamMap["sub_" + act.entity_id];
+        return wsId ? `/browse/${wsId}` : "/browse";
+      }
+      case "organisation":
+        return "/people";
+      default:
+        return null;
     }
   }
 
@@ -404,23 +455,29 @@ export default async function DashboardPage() {
       </section>
 
       {/* ── Key Milestones ─────────────────────────────────────────────── */}
-      {milestones.length > 0 && (
-        <section className="border-t border-stone-200 px-4 py-5 sm:px-6">
-          <h2 className="text-xs font-sans font-semibold uppercase tracking-widest text-stone-400 mb-3">
-            Key Milestones
-          </h2>
+      <section className="border-t border-stone-200 px-4 py-5 sm:px-6">
+        <h2 className="text-xs font-sans font-semibold uppercase tracking-widest text-stone-400 mb-3">
+          Key Milestones
+        </h2>
+        {milestones.length === 0 ? (
+          <p className="text-sm text-stone-500">No milestones set yet.</p>
+        ) : (
           <ul className="space-y-2">
             {milestones.map((ms) => {
               const days = ms.target_date ? daysFromNow(ms.target_date) : null;
+              const shortDate = ms.target_date
+                ? new Date(ms.target_date + (ms.target_date.includes("T") ? "" : "T00:00:00"))
+                    .toLocaleDateString("en-GB", { day: "numeric", month: "short" })
+                : null;
               return (
                 <li key={ms.id} className="text-sm flex items-baseline gap-2">
                   <span className="font-medium text-navy">{ms.title}</span>
                   <span className="flex-1 border-b border-dotted border-stone-300" />
-                  {ms.target_date ? (
+                  {shortDate ? (
                     <span className="text-stone-500 whitespace-nowrap tabular-nums">
-                      {formatDate(ms.target_date)}{" "}
+                      {shortDate}{" "}
                       <span className="text-stone-400">
-                        ({days !== null && days >= 0 ? `${days}d` : `${Math.abs(days!)}d ago`})
+                        ({days !== null && days >= 0 ? `${days} days` : `${Math.abs(days!)}d ago`})
                       </span>
                     </span>
                   ) : (
@@ -430,8 +487,8 @@ export default async function DashboardPage() {
               );
             })}
           </ul>
-        </section>
-      )}
+        )}
+      </section>
 
       {/* ── What's Been Happening ──────────────────────────────────────── */}
       {activities.length > 0 && (
@@ -446,19 +503,33 @@ export default async function DashboardPage() {
                   {group.label}
                 </p>
                 <ul className="space-y-1.5">
-                  {group.items.map((act) => (
-                    <li key={act.id} className="text-sm text-navy">
-                      {act.description || "Activity recorded"}
-                      {act.user_name && (
-                        <span className="text-stone-400 ml-1.5">
-                          — {act.user_name}
+                  {group.items.map((act) => {
+                    const href = activityHref(act);
+                    const content = (
+                      <>
+                        {act.description || "Activity recorded"}
+                        {act.user_name && (
+                          <span className="text-stone-400 ml-1.5">
+                            — {act.user_name}
+                          </span>
+                        )}
+                        <span className="text-stone-300 ml-1.5 text-xs">
+                          {timeAgo(act.created_at)}
                         </span>
-                      )}
-                      <span className="text-stone-300 ml-1.5 text-xs">
-                        {timeAgo(act.created_at)}
-                      </span>
-                    </li>
-                  ))}
+                      </>
+                    );
+                    return (
+                      <li key={act.id} className="text-sm text-navy">
+                        {href ? (
+                          <Link href={href} className="hover:underline">
+                            {content}
+                          </Link>
+                        ) : (
+                          content
+                        )}
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             ))}
@@ -474,9 +545,10 @@ export default async function DashboardPage() {
           </h2>
           <div className="space-y-4">
             {workstreamSummaries.map((ws) => (
-              <div
+              <Link
                 key={ws.id}
-                className="rounded-lg bg-white/60 border border-stone-100 px-4 py-3"
+                href={`/browse/${ws.id}`}
+                className="block rounded-lg bg-white/60 border border-stone-100 px-4 py-3 transition-colors hover:bg-cream-dark"
               >
                 <p className="text-sm font-medium text-navy">{ws.name}</p>
                 <p className="text-xs text-stone-500 mt-1 tabular-nums">
@@ -496,7 +568,7 @@ export default async function DashboardPage() {
                     Latest: {ws.latest_activity}
                   </p>
                 )}
-              </div>
+              </Link>
             ))}
           </div>
         </section>
@@ -523,26 +595,6 @@ export default async function DashboardPage() {
           </ul>
         </section>
       )}
-
-      {/* ── Quick Links (bottom nav for context) ──────────────────────── */}
-      <section className="border-t border-stone-200 px-4 py-6 sm:px-6">
-        <div className="flex flex-wrap gap-2">
-          {[
-            { href: "/browse", label: "Browse" },
-            { href: "/todos", label: "To-Dos" },
-            { href: "/people", label: "People" },
-            { href: "/meeting-notes", label: "Notes" },
-          ].map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              className="inline-flex items-center rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-navy-light transition-colors hover:bg-cream-dark hover:text-navy"
-            >
-              {link.label}
-            </Link>
-          ))}
-        </div>
-      </section>
 
       {/* Bottom spacer for mobile bottom nav */}
       <div className="h-4" />
