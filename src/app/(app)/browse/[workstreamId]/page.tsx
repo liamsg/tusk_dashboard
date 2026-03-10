@@ -8,6 +8,9 @@ import { CollapsibleSection } from "@/components/CollapsibleSection";
 import { AddCategoryInline } from "./AddCategoryInline";
 import { AddSubcategoryInline } from "./AddSubcategoryInline";
 import { AddCardInline } from "./AddCardInline";
+import { EditableCategoryName } from "./EditableCategoryName";
+import { EditableSubcategoryName } from "./EditableSubcategoryName";
+import { ViewToggle } from "./ViewToggle";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -38,6 +41,53 @@ interface CardRow {
   people_count: number;
 }
 
+interface ActivityItem {
+  id: string;
+  description: string | null;
+  user_name: string | null;
+  created_at: string;
+}
+
+interface OpenTodo {
+  id: string;
+  title: string;
+  assignee_name: string | null;
+  due_date: string | null;
+  ball_in_court: string | null;
+  bic_person_name: string | null;
+  bic_org_name: string | null;
+}
+
+interface CategorySummary {
+  id: string;
+  name: string;
+  card_count: number;
+  open_todo_count: number;
+}
+
+// ── Helpers ─────────────────────────────────────────────────────────────────────
+
+function timeAgo(iso: string): string {
+  const now = new Date();
+  const then = new Date(iso.includes("T") ? iso : iso + "T00:00:00");
+  const diffMs = now.getTime() - then.getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return "yesterday";
+  if (days < 7) return `${days} days ago`;
+  const d = new Date(iso.includes("T") ? iso : iso + "T00:00:00");
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+}
+
+function formatDueDate(iso: string): string {
+  const d = new Date(iso + (iso.includes("T") ? "" : "T00:00:00"));
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+}
+
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 type PageProps = {
@@ -51,7 +101,9 @@ export default async function WorkstreamPage({ params, searchParams }: PageProps
   void session;
 
   const { workstreamId } = await params;
-  const { category: expandCategoryId } = await searchParams;
+  const resolvedSearchParams = await searchParams;
+  const expandCategoryId = resolvedSearchParams.category;
+  const currentView = (resolvedSearchParams.view === "cards" ? "cards" : "briefing") as "briefing" | "cards";
 
   const db = getDb();
 
@@ -122,23 +174,267 @@ export default async function WorkstreamPage({ params, searchParams }: PageProps
     };
   });
 
+  // ── Briefing data ──────────────────────────────────────────────────────────
+
+  // Key developments this week (last 7 days from activity_log)
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  const sevenDaysAgoISO = sevenDaysAgo.toISOString().replace("T", " ").slice(0, 19);
+
+  const recentActivity = db
+    .prepare(
+      `SELECT a.id, a.description, u.name as user_name, a.created_at
+       FROM activity_log a
+       LEFT JOIN users u ON a.user_id = u.id
+       WHERE a.created_at >= ?
+         AND (
+           (a.entity_type = 'card' AND a.entity_id IN (
+             SELECT c.id FROM cards c
+             LEFT JOIN subcategories sc ON c.subcategory_id = sc.id
+             LEFT JOIN categories cat ON (c.category_id = cat.id OR sc.category_id = cat.id)
+             WHERE cat.workstream_id = ?
+           ))
+           OR (a.entity_type = 'category' AND a.entity_id IN (
+             SELECT id FROM categories WHERE workstream_id = ?
+           ))
+           OR (a.entity_type = 'subcategory' AND a.entity_id IN (
+             SELECT sc.id FROM subcategories sc
+             JOIN categories cat ON sc.category_id = cat.id
+             WHERE cat.workstream_id = ?
+           ))
+         )
+       ORDER BY a.created_at DESC
+       LIMIT 5`
+    )
+    .all(sevenDaysAgoISO, workstreamId, workstreamId, workstreamId) as ActivityItem[];
+
+  // Open actions (todos linked to cards in this workstream, ball_in_court != 'external')
+  const openActions = db
+    .prepare(
+      `SELECT DISTINCT t.id, t.title, u.name as assignee_name, t.due_date,
+              t.ball_in_court, p.name as bic_person_name, o.name as bic_org_name
+       FROM todos t
+       JOIN card_todos ct ON ct.todo_id = t.id
+       JOIN cards c ON ct.card_id = c.id AND c.archived = 0
+       LEFT JOIN subcategories sc ON c.subcategory_id = sc.id
+       LEFT JOIN categories cat ON (c.category_id = cat.id OR sc.category_id = cat.id)
+       LEFT JOIN users u ON t.assigned_to = u.id
+       LEFT JOIN people p ON t.ball_in_court_person_id = p.id
+       LEFT JOIN organisations o ON p.organisation_id = o.id
+       WHERE cat.workstream_id = ?
+         AND t.archived = 0
+         AND t.status = 'open'
+         AND (t.ball_in_court IS NULL OR t.ball_in_court != 'external')
+       ORDER BY t.due_date ASC`
+    )
+    .all(workstreamId) as OpenTodo[];
+
+  // Waiting on external
+  const waitingExternal = db
+    .prepare(
+      `SELECT DISTINCT t.id, t.title, u.name as assignee_name, t.due_date,
+              t.ball_in_court, p.name as bic_person_name, o.name as bic_org_name
+       FROM todos t
+       JOIN card_todos ct ON ct.todo_id = t.id
+       JOIN cards c ON ct.card_id = c.id AND c.archived = 0
+       LEFT JOIN subcategories sc ON c.subcategory_id = sc.id
+       LEFT JOIN categories cat ON (c.category_id = cat.id OR sc.category_id = cat.id)
+       LEFT JOIN users u ON t.assigned_to = u.id
+       LEFT JOIN people p ON t.ball_in_court_person_id = p.id
+       LEFT JOIN organisations o ON p.organisation_id = o.id
+       WHERE cat.workstream_id = ?
+         AND t.archived = 0
+         AND t.status = 'open'
+         AND t.ball_in_court = 'external'
+       ORDER BY t.due_date ASC`
+    )
+    .all(workstreamId) as OpenTodo[];
+
+  // Categories summary
+  const categorySummaries: CategorySummary[] = categories.map((cat) => {
+    const cardCount = (
+      db
+        .prepare(
+          `SELECT COUNT(DISTINCT c.id) as count FROM cards c
+           LEFT JOIN subcategories sc ON c.subcategory_id = sc.id
+           WHERE (c.category_id = ? OR sc.category_id = ?) AND c.archived = 0`
+        )
+        .get(cat.id, cat.id) as { count: number }
+    ).count;
+
+    const openTodoCount = (
+      db
+        .prepare(
+          `SELECT COUNT(DISTINCT t.id) as count FROM todos t
+           JOIN card_todos ct ON ct.todo_id = t.id
+           JOIN cards c ON ct.card_id = c.id AND c.archived = 0
+           LEFT JOIN subcategories sc ON c.subcategory_id = sc.id
+           WHERE (c.category_id = ? OR sc.category_id = ?) AND t.archived = 0 AND t.status = 'open'`
+        )
+        .get(cat.id, cat.id) as { count: number }
+    ).count;
+
+    return {
+      id: cat.id,
+      name: cat.name,
+      card_count: cardCount,
+      open_todo_count: openTodoCount,
+    };
+  });
+
   return (
     <div className="mx-auto max-w-3xl px-4">
-      {/* Back link */}
+      {/* Back link + toggle */}
       <header className="pt-6 pb-5">
-        <Link
-          href="/browse"
-          className="text-sm text-stone-400 hover:text-navy transition-colors"
-        >
-          &larr; Back to Browse
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link
+            href="/browse"
+            className="text-sm text-stone-400 hover:text-navy transition-colors"
+          >
+            &larr; Back to Browse
+          </Link>
+          <ViewToggle currentView={currentView} workstreamId={workstreamId} />
+        </div>
         <h1 className="mt-2 font-heading text-xl text-navy">
           {workstream.name}
         </h1>
       </header>
 
-      {/* Categories */}
-      <div className="space-y-4">
+      {/* ── Briefing View ─────────────────────────────────────────────── */}
+      {currentView === "briefing" && (
+        <div className="space-y-0">
+          {/* Key Developments This Week */}
+          <section className="border-t border-stone-200 py-5">
+            <h2 className="text-xs font-sans font-semibold uppercase tracking-widest text-stone-400 mb-3">
+              Key Developments This Week
+            </h2>
+            {recentActivity.length === 0 ? (
+              <p className="text-sm text-stone-500">No recent activity.</p>
+            ) : (
+              <ul className="space-y-2">
+                {recentActivity.map((act) => (
+                  <li key={act.id} className="text-sm text-stone-700">
+                    <span className="text-stone-400 mr-1.5">&bull;</span>
+                    {act.description}
+                    {act.user_name && (
+                      <span className="text-stone-400">
+                        {" "}&mdash; {act.user_name}
+                      </span>
+                    )}
+                    <span className="text-stone-400">
+                      , {timeAgo(act.created_at)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          {/* Open Actions */}
+          <section className="border-t border-stone-200 py-5">
+            <h2 className="text-xs font-sans font-semibold uppercase tracking-widest text-stone-400 mb-3">
+              Open Actions
+            </h2>
+            {openActions.length === 0 ? (
+              <p className="text-sm text-stone-500">
+                <span className="text-status-done mr-1.5">&#10003;</span>
+                All clear — no open actions
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {openActions.map((todo) => (
+                  <li key={todo.id} className="text-sm text-stone-700">
+                    <Link
+                      href={`/todos/${todo.id}`}
+                      className="hover:text-navy transition-colors"
+                    >
+                      <span className="text-stone-400 mr-1.5">&#9744;</span>
+                      <span className="font-medium text-navy">{todo.title}</span>
+                    </Link>
+                    {todo.assignee_name && (
+                      <span className="text-stone-400">
+                        {" "}&mdash; {todo.assignee_name}
+                      </span>
+                    )}
+                    {todo.due_date && (
+                      <span className="text-stone-400">
+                        , {formatDueDate(todo.due_date)}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          {/* Waiting on External */}
+          {waitingExternal.length > 0 && (
+            <section className="border-t border-stone-200 py-5">
+              <h2 className="text-xs font-sans font-semibold uppercase tracking-widest text-stone-400 mb-3">
+                Waiting on External
+              </h2>
+              <ul className="space-y-2">
+                {waitingExternal.map((todo) => (
+                  <li key={todo.id} className="text-sm text-stone-700">
+                    <Link
+                      href={`/todos/${todo.id}`}
+                      className="hover:text-navy transition-colors"
+                    >
+                      <span className="text-stone-400 mr-1.5">&#9676;</span>
+                      <span className="font-medium text-navy">{todo.title}</span>
+                    </Link>
+                    {(todo.bic_person_name || todo.bic_org_name) && (
+                      <span className="text-stone-400">
+                        {" "}&mdash;{" "}
+                        {todo.bic_org_name && todo.bic_person_name
+                          ? `${todo.bic_org_name} (${todo.bic_person_name})`
+                          : todo.bic_person_name || todo.bic_org_name}
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {/* Categories Summary */}
+          <section className="border-t border-stone-200 py-5">
+            <h2 className="text-xs font-sans font-semibold uppercase tracking-widest text-stone-400 mb-3">
+              Categories
+            </h2>
+            {categorySummaries.length === 0 ? (
+              <p className="text-sm text-stone-500">No categories yet.</p>
+            ) : (
+              <ul className="space-y-2">
+                {categorySummaries.map((cat) => (
+                  <li key={cat.id} className="text-sm">
+                    <Link
+                      href={`/browse/${workstreamId}?view=cards&category=${cat.id}`}
+                      className="text-navy font-medium hover:underline"
+                    >
+                      {cat.name}
+                    </Link>
+                    <span className="text-stone-400">
+                      {" "}&mdash; {cat.card_count} {cat.card_count === 1 ? "card" : "cards"}
+                      {cat.open_todo_count > 0
+                        ? `, ${cat.open_todo_count} open ${cat.open_todo_count === 1 ? "to-do" : "to-dos"}`
+                        : ""}
+                    </span>
+                    {cat.open_todo_count === 0 && cat.card_count > 0 && (
+                      <span className="text-status-done ml-1.5">
+                        all clear &#10003;
+                      </span>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+      )}
+
+      {/* ── Cards View ────────────────────────────────────────────────── */}
+      {currentView === "cards" && <div className="space-y-4">
         {categoriesWithData.map((cat) => {
           const isExpanded = expandCategoryId === cat.id;
 
@@ -148,7 +444,7 @@ export default async function WorkstreamPage({ params, searchParams }: PageProps
               className="border-t border-stone-200 pt-4"
             >
               <CollapsibleSection
-                title={cat.name}
+                title={<EditableCategoryName categoryId={cat.id} name={cat.name} />}
                 count={cat.totalCardCount}
                 defaultOpen={isExpanded}
                 actions={
@@ -175,7 +471,7 @@ export default async function WorkstreamPage({ params, searchParams }: PageProps
                   {cat.subcategories.map((sub) => (
                     <CollapsibleSection
                       key={sub.id}
-                      title={sub.name}
+                      title={<EditableSubcategoryName subcategoryId={sub.id} name={sub.name} />}
                       count={sub.cards.length}
                       defaultOpen={isExpanded && sub.cards.length > 0}
                       actions={
@@ -219,7 +515,7 @@ export default async function WorkstreamPage({ params, searchParams }: PageProps
         <div className="border-t border-stone-200 pt-4">
           <AddCategoryInline workstreamId={workstream.id} />
         </div>
-      </div>
+      </div>}
 
       <div className="h-8" />
     </div>

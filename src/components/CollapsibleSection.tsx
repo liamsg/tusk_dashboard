@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from "react";
 
 interface CollapsibleSectionProps {
-  title: string;
+  title: ReactNode;
   count?: number;
   defaultOpen?: boolean;
   actions?: ReactNode;
@@ -21,23 +21,22 @@ export function CollapsibleSection({
 
   return (
     <div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5">
         <button
           type="button"
           onClick={() => setOpen(!open)}
-          className="flex items-center gap-1.5 text-sm font-medium text-navy hover:text-navy-light transition-colors text-left"
+          className="text-stone-400 w-4 text-center select-none hover:text-navy transition-colors flex-shrink-0"
+          aria-label={open ? "Collapse" : "Expand"}
         >
-          <span className="text-stone-400 w-4 text-center select-none">
-            {open ? "\u25BE" : "\u25B8"}
-          </span>
-          <span>{title}</span>
-          {count !== undefined && (
-            <span className="text-stone-400 font-normal">
-              ({count}{" "}
-              {count === 1 ? "card" : "cards"})
-            </span>
-          )}
+          {open ? "\u25BE" : "\u25B8"}
         </button>
+        <span className="text-sm font-medium text-navy">{title}</span>
+        {count !== undefined && (
+          <span className="text-sm text-stone-400 font-normal">
+            ({count}{" "}
+            {count === 1 ? "card" : "cards"})
+          </span>
+        )}
         {actions && (
           <div className="ml-auto flex items-center gap-1">{actions}</div>
         )}

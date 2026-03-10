@@ -7,6 +7,7 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { AddNoteForm } from "@/components/AddNoteForm";
 import { AddReferenceForm } from "@/components/AddReferenceForm";
 import { ArchiveButton } from "./ArchiveButton";
+import { FlagButton } from "./FlagButton";
 import { StatusDropdown } from "./StatusDropdown";
 import { AddPersonInline } from "./AddPersonInline";
 import { AddTodoInline } from "./AddTodoInline";
@@ -173,6 +174,34 @@ export default async function CardDetailPage({ params }: PageProps) {
       .get(category.workstream_id) as WorkstreamRow | undefined;
   }
 
+  // Sibling cards for prev/next navigation
+  let siblings: { id: string; title: string }[] = [];
+  if (card.subcategory_id) {
+    siblings = db
+      .prepare(
+        `SELECT id, title FROM cards
+         WHERE subcategory_id = ? AND archived = 0
+         ORDER BY title`
+      )
+      .all(card.subcategory_id) as { id: string; title: string }[];
+  } else if (card.category_id) {
+    siblings = db
+      .prepare(
+        `SELECT id, title FROM cards
+         WHERE category_id = ? AND subcategory_id IS NULL AND archived = 0
+         ORDER BY title`
+      )
+      .all(card.category_id) as { id: string; title: string }[];
+  }
+
+  const siblingIndex = siblings.findIndex((s) => s.id === card.id);
+  const prevCard = siblingIndex > 0 ? siblings[siblingIndex - 1] : null;
+  const nextCard =
+    siblingIndex >= 0 && siblingIndex < siblings.length - 1
+      ? siblings[siblingIndex + 1]
+      : null;
+  const showSiblingNav = siblings.length > 1;
+
   // People
   const people = db
     .prepare(
@@ -270,7 +299,10 @@ export default async function CardDetailPage({ params }: PageProps) {
               {card.title}
             </h1>
           </div>
-          <ArchiveButton cardId={card.id} />
+          <div className="flex items-center gap-2">
+            <FlagButton cardId={card.id} flagged={!!card.flagged_for_discussion} />
+            <ArchiveButton cardId={card.id} />
+          </div>
         </div>
 
         {/* Breadcrumb */}
@@ -301,6 +333,11 @@ export default async function CardDetailPage({ params }: PageProps) {
             )}
             {" > "}
             <span className="text-stone-500">{card.title}</span>
+          </p>
+        )}
+        {showSiblingNav && (
+          <p className="mt-0.5 text-xs text-stone-400">
+            Card {siblingIndex + 1} of {siblings.length}
           </p>
         )}
 
@@ -496,6 +533,32 @@ export default async function CardDetailPage({ params }: PageProps) {
           </ul>
         )}
       </section>
+
+      {/* Prev / Next navigation */}
+      {showSiblingNav && (
+        <nav className="flex justify-between border-t border-stone-200 py-3 text-sm text-stone-500">
+          {prevCard ? (
+            <Link
+              href={`/cards/${prevCard.id}`}
+              className="hover:text-navy transition-colors"
+            >
+              &larr; {prevCard.title}
+            </Link>
+          ) : (
+            <span />
+          )}
+          {nextCard ? (
+            <Link
+              href={`/cards/${nextCard.id}`}
+              className="hover:text-navy transition-colors"
+            >
+              {nextCard.title} &rarr;
+            </Link>
+          ) : (
+            <span />
+          )}
+        </nav>
+      )}
 
       {/* Activity */}
       {activities.length > 0 && (
