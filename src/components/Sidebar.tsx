@@ -13,6 +13,7 @@ const navLinks = [
   { href: "/todos", label: "To-Dos" },
   { href: "/people", label: "People" },
   { href: "/meeting-notes", label: "Meeting Notes" },
+  { href: "/agenda", label: "Agenda" },
   { href: "/archive", label: "Archive" },
 ];
 

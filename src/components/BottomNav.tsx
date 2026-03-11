@@ -13,6 +13,7 @@ const navItems = [
 
 const moreItems = [
   { href: "/meeting-notes", label: "Meetings" },
+  { href: "/agenda", label: "Agenda" },
   { href: "/archive", label: "Archive" },
 ];
 
